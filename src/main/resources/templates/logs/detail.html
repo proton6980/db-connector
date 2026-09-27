@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('日志详情')}"></head>
+<body>
+<nav th:replace="~{fragments :: navbar}"></nav>
+<div class="container mt-3" style="max-width:960px">
+    <h4 class="mb-3">日志详情 <small class="text-muted" th:text="'#' + ${log.id}"></small></h4>
+    <table class="table table-bordered">
+        <tr><th style="width:140px">连接ID</th><td th:text="${log.connectionId}"></td></tr>
+        <tr><th>账号</th><td th:text="${log.accountId}"></td></tr>
+        <tr><th>SQL</th><td><pre th:text="${log.sqlText}"></pre></td></tr>
+        <tr><th>参数</th><td><pre th:text="${log.params}"></pre></td></tr>
+        <tr>
+            <th>状态</th>
+            <td>
+                <span th:if="${log.status == 'SUCCESS'}" class="badge bg-success">SUCCESS</span>
+                <span th:if="${log.status == 'ERROR'}" class="badge bg-danger">ERROR</span>
+                <span th:if="${log.status == 'BLOCKED'}" class="badge bg-warning text-dark">BLOCKED</span>
+            </td>
+        </tr>
+        <tr><th>行数</th><td th:text="${log.rowCount}"></td></tr>
+        <tr><th>耗时</th><td th:text="${log.durationMs} + 'ms'"></td></tr>
+        <tr th:if="${log.errorMsg}"><th>错误</th><td><pre class="text-danger" th:text="${log.errorMsg}"></pre></td></tr>
+        <tr><th>客户端IP</th><td th:text="${log.clientIp}"></td></tr>
+        <tr><th>执行时间</th><td th:text="${#temporals.format(log.executedAt, 'yyyy-MM-dd HH:mm:ss')}"></td></tr>
+    </table>
+    <a class="btn btn-secondary" th:href="@{/logs}">返回列表</a>
+</div>
+</body>
+</html>

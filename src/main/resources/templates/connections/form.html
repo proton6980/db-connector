@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${isNew} ? '新建连接' : '编辑连接')}"></head>
+<body>
+<nav th:replace="~{fragments :: navbar}"></nav>
+<div class="container mt-3" style="max-width:720px">
+    <h4 th:text="${isNew} ? '新建连接' : '编辑连接'"></h4>
+    <form th:action="${isNew} ? @{/connections} : @{/connections/{id}(id=${connectionId})}"
+          method="post" th:object="${form}">
+        <input type="hidden" name="_csrf" th:value="${session.__csrf}">
+
+        <div class="mb-3">
+            <label class="form-label" for="name">名称</label>
+            <input class="form-control" id="name" th:field="*{name}">
+            <div class="text-danger" th:errors="*{name}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="dbType">数据库类型</label>
+            <select class="form-select" id="dbType" th:field="*{dbType}">
+                <option value="">请选择</option>
+                <option th:each="t : ${dbTypes}" th:value="${t}" th:text="${t}"></option>
+            </select>
+            <div class="text-danger" th:errors="*{dbType}"></div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-8">
+                <label class="form-label" for="host">主机</label>
+                <input class="form-control" id="host" th:field="*{host}">
+                <div class="text-danger" th:errors="*{host}"></div>
+            </div>
+            <div class="col-4">
+                <label class="form-label" for="port">端口</label>
+                <input class="form-control" id="port" type="number" th:field="*{port}">
+                <div class="text-danger" th:errors="*{port}"></div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="username">用户名</label>
+            <input class="form-control" id="username" th:field="*{username}">
+            <div class="text-danger" th:errors="*{username}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="password">密码</label>
+            <input class="form-control" id="password" type="password" th:field="*{password}"
+                   th:placeholder="${isNew} ? '必填' : '留空则不修改'" autocomplete="new-password">
+            <div class="text-danger" th:errors="*{password}"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="databaseName">数据库名</label>
+            <input class="form-control" id="databaseName" th:field="*{databaseName}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="extraParams">额外参数（JSON）</label>
+            <input class="form-control" id="extraParams" th:field="*{extraParams}" placeholder='{"ssl":true}'>
+        </div>
+        <div class="row mb-3">
+            <div class="col-6">
+                <label class="form-label" for="poolMin">最小池大小</label>
+                <input class="form-control" id="poolMin" type="number" th:field="*{poolMin}">
+                <div class="text-danger" th:errors="*{poolMin}"></div>
+            </div>
+            <div class="col-6">
+                <label class="form-label" for="poolMax">最大池大小</label>
+                <input class="form-control" id="poolMax" type="number" th:field="*{poolMax}">
+                <div class="text-danger" th:errors="*{poolMax}"></div>
+            </div>
+        </div>
+        <div class="mb-3 form-check">
+            <input class="form-check-input" id="active" type="checkbox" th:field="*{active}">
+            <label class="form-check-label" for="active">启用</label>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit">保存</button>
+            <a class="btn btn-secondary" th:href="@{/connections}">取消</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

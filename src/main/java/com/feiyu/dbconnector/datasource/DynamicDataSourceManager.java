@@ -41,6 +41,10 @@ public class DynamicDataSourceManager {
         }
     }
 
+    public HikariDataSource getPool(String key) {
+        return pools.get(key);
+    }
+
     @PreDestroy
     public void closeAll() {
         pools.values().forEach(HikariDataSource::close);

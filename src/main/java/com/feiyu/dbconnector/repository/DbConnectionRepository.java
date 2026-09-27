@@ -14,6 +14,8 @@ public interface DbConnectionRepository extends JpaRepository<DbConnection, Stri
 
     List<DbConnection> findByActiveTrue();
 
+    boolean existsByName(String name);
+
     /** 绕过 converter 直接取落库密文（仅测试用）。 */
     @Query(value = "SELECT password FROM db_connections WHERE name = :name", nativeQuery = true)
     String findRawPasswordByName(@Param("name") String name);

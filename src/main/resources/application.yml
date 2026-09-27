@@ -36,6 +36,9 @@ dbconnector:
   query:
     max-rows: 100
     timeout-seconds: 10
+  console:
+    # 控制台登录口令；未设置 = 控制台放开（仅 dev）；prod 必须设置
+    password: ${DBCONNECTOR_CONSOLE_PASSWORD:}
   seed:
     # dev 种子连接：启动时加密入库（已存在同名则跳过）；连接管理界面是 Phase 2
     connections:
