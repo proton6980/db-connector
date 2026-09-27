@@ -1,0 +1,29 @@
+package com.feiyu.dbconnector.mcp;
+
+import com.feiyu.dbconnector.entity.DbConnection;
+import com.feiyu.dbconnector.repository.DbConnectionRepository;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class ConnectionTools {
+
+    private final DbConnectionRepository repository;
+
+    public ConnectionTools(DbConnectionRepository repository) {
+        this.repository = repository;
+    }
+
+    public record ConnectionInfo(String id, String name, String dbType, String host, Integer port,
+                                 String databaseName) {}
+
+    @Tool(description = "列出所有可用数据库连接（ID、名称、类型、地址、库名），供其他 tool 的 connection 参数引用")
+    public List<ConnectionInfo> list_connections() {
+        return repository.findByActiveTrue().stream()
+                .map(c -> new ConnectionInfo(c.getId(), c.getName(), c.getDbType(), c.getHost(),
+                        c.getPort(), c.getDatabaseName()))
+                .toList();
+    }
+}

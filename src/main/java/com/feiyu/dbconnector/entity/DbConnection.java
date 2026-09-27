@@ -1,6 +1,8 @@
 package com.feiyu.dbconnector.entity;
 
+import com.feiyu.dbconnector.security.EncryptedStringConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -34,6 +36,7 @@ public class DbConnection {
     @Column(nullable = false, length = 100)
     private String username;
 
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(nullable = false, length = 500)
     private String password;
 

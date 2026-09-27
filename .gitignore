@@ -33,3 +33,5 @@ target/
 # macOS
 .DS_Store
 /plan/
+/data/
+opencode.json

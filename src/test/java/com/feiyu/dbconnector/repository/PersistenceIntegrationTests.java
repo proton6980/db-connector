@@ -3,6 +3,7 @@ package com.feiyu.dbconnector.repository;
 import com.feiyu.dbconnector.entity.AccountPermission;
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.entity.SqlAuditLog;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,6 +24,12 @@ class PersistenceIntegrationTests {
     private AccountPermissionRepository permissionRepository;
     @Autowired
     private SqlAuditLogRepository auditLogRepository;
+
+    @BeforeEach
+    void cleanAudit() {
+        // mem H2 跨测试类共享，避免其他测试类遗留的审计行影响 count 断言
+        auditLogRepository.deleteAll();
+    }
 
     private DbConnection newConnection(String name) {
         DbConnection c = new DbConnection();

@@ -27,7 +27,7 @@ class DmPooledConnectivityTest {
                 System.getenv("DM_URL"),
                 System.getenv().getOrDefault("DM_USER", "SYSDBA"),
                 System.getenv().getOrDefault("DM_PASSWORD", "SYSDBA"),
-                null, 1, 2); // connectionTestQuery=null：验证 DM 驱动 JDBC4 isValid 是否够用
+                null, 1, 2, false); // connectionTestQuery=null：验证 DM 驱动 JDBC4 isValid 是否够用
 
         try (Connection conn = manager.getOrCreate("dm-spike", spec).getConnection();
              Statement stmt = conn.createStatement();

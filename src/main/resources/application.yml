@@ -2,13 +2,15 @@ spring:
   application:
     name: db-connector
   datasource:
-    url: jdbc:h2:mem:dbconnector;MODE=MySQL;DB_CLOSE_DELAY=-1
+    # 文件模式：连接配置/权限/审计日志需跨重启持久化（相对运行目录 ./data/）
+    url: jdbc:h2:file:./data/dbconnector;MODE=MySQL
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
   jpa:
     hibernate:
       ddl-auto: none
+    open-in-view: false
     defer-datasource-initialization: true
   sql:
     init:
@@ -18,9 +20,28 @@ spring:
       server:
         name: db-connector
         version: 0.0.1
-        # SSE 端点（默认 /sse），客户端消息回传端点 /mcp/message
-        sse-endpoint: /sse
-        sse-message-endpoint: /mcp/message
+        # Streamable HTTP 传输（MCP 2025-03-26 规范），端点默认 /mcp
+        # 兼容 Grok CLI / OpenCode / Claude Code 等新客户端
+        protocol: STREAMABLE
 
 server:
   port: 8080
+  # 本地 sidecar，仅监听回环地址，不对外暴露
+  address: 127.0.0.1
+
+dbconnector:
+  crypto:
+    # 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥）；prod 必须通过环境变量注入
+    key: ${DBCONNECTOR_CRYPTO_KEY:}
+  query:
+    max-rows: 100
+    timeout-seconds: 10
+  seed:
+    # dev 种子连接：启动时加密入库（已存在同名则跳过）；连接管理界面是 Phase 2
+    connections:
+      - name: dm8-local
+        db-type: DM
+        host: localhost
+        port: 5236
+        username: SYSDBA
+        password: SYSDBA001

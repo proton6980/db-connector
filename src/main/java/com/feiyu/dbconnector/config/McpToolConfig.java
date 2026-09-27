@@ -1,6 +1,8 @@
 package com.feiyu.dbconnector.config;
 
-import com.feiyu.dbconnector.mcp.ProbeTools;
+import com.feiyu.dbconnector.mcp.ConnectionTools;
+import com.feiyu.dbconnector.mcp.QueryTools;
+import com.feiyu.dbconnector.mcp.SchemaTools;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +11,10 @@ import org.springframework.context.annotation.Configuration;
 public class McpToolConfig {
 
     @Bean
-    MethodToolCallbackProvider toolCallbacks(ProbeTools probeTools) {
-        return MethodToolCallbackProvider.builder().toolObjects(probeTools).build();
+    MethodToolCallbackProvider toolCallbacks(QueryTools queryTools, SchemaTools schemaTools,
+                                             ConnectionTools connectionTools) {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(queryTools, schemaTools, connectionTools)
+                .build();
     }
 }

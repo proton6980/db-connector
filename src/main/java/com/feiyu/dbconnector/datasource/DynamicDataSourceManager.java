@@ -26,6 +26,7 @@ public class DynamicDataSourceManager {
             cfg.setMinimumIdle(spec.minIdle());
             cfg.setMaximumPoolSize(spec.maxPoolSize());
             cfg.setConnectionTimeout(5000);
+            cfg.setReadOnly(spec.readOnly());
             if (spec.connectionTestQuery() != null) {
                 cfg.setConnectionTestQuery(spec.connectionTestQuery());
             }

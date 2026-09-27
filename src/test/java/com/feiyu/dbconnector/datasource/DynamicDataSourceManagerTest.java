@@ -19,7 +19,7 @@ class DynamicDataSourceManagerTest {
     @Test
     void createReuseClose() throws Exception {
         DynamicDataSourceManager manager = new DynamicDataSourceManager();
-        DataSourceSpec spec = new DataSourceSpec("jdbc:h2:mem:p0spike", "sa", "", null, 1, 2);
+        DataSourceSpec spec = new DataSourceSpec("jdbc:h2:mem:p0spike", "sa", "", null, 1, 2, false);
 
         HikariDataSource ds = manager.getOrCreate("h2", spec);
         try (Connection conn = ds.getConnection();

@@ -1,5 +1,5 @@
 -- 数据库连接配置
-CREATE TABLE db_connections (
+CREATE TABLE IF NOT EXISTS db_connections (
     id          VARCHAR(36) PRIMARY KEY,
     name        VARCHAR(100) NOT NULL UNIQUE,  -- 连接别名，如 "生产-订单库"
     db_type     VARCHAR(20) NOT NULL,           -- DM / KINGBASE / MYSQL / ORACLE / REDIS
@@ -17,7 +17,7 @@ CREATE TABLE db_connections (
 );
 
 -- 账号权限映射（控制哪些Agent/用户能用哪些连接）
-CREATE TABLE account_permissions (
+CREATE TABLE IF NOT EXISTS account_permissions (
     id          VARCHAR(36) PRIMARY KEY,
     account_id  VARCHAR(100) NOT NULL,          -- Agent ID / 用户名 / API Key Hash
     connection_id VARCHAR(36) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE account_permissions (
 );
 
 -- SQL 执行日志
-CREATE TABLE sql_audit_log (
+CREATE TABLE IF NOT EXISTS sql_audit_log (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     connection_id VARCHAR(36) NOT NULL,
     account_id  VARCHAR(100) NOT NULL,
@@ -44,6 +44,6 @@ CREATE TABLE sql_audit_log (
 );
 
 -- 索引
-CREATE INDEX idx_audit_conn ON sql_audit_log(connection_id, executed_at);
-CREATE INDEX idx_audit_account ON sql_audit_log(account_id, executed_at);
-CREATE INDEX idx_perm_account ON account_permissions(account_id);
+CREATE INDEX IF NOT EXISTS idx_audit_conn ON sql_audit_log(connection_id, executed_at);
+CREATE INDEX IF NOT EXISTS idx_audit_account ON sql_audit_log(account_id, executed_at);
+CREATE INDEX IF NOT EXISTS idx_perm_account ON account_permissions(account_id);
