@@ -10,6 +10,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -23,12 +26,15 @@ class ConsoleAuthFilterTest {
 
     private ConsoleProperties properties;
     private ConsoleAuthFilter filter;
+    private StringWriter responseBody;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         properties = new ConsoleProperties();
         properties.setPassword("testpass");
         filter = new ConsoleAuthFilter(properties);
+        responseBody = new StringWriter();
+        lenient().when(response.getWriter()).thenReturn(new PrintWriter(responseBody));
     }
 
     @Test
@@ -53,6 +59,41 @@ class ConsoleAuthFilterTest {
     }
 
     @Test
+    void jsPathPassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/js/app.js");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void indexHtmlPassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/index.html");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void loginHtmlPassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/login.html");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void apiAuthLoginPassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/api/auth/login");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void apiAuthMePassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/api/auth/me");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
     void noSessionRedirectsToLogin() throws Exception {
         when(request.getServletPath()).thenReturn("/dashboard");
         when(request.getSession(false)).thenReturn(null);
@@ -67,6 +108,17 @@ class ConsoleAuthFilterTest {
         when(session.getAttribute(ConsoleAuthFilter.SESSION_AUTH_KEY)).thenReturn(null);
         filter.doFilterInternal(request, response, filterChain);
         verify(response).sendRedirect("/login");
+    }
+
+    @Test
+    void unauthenticatedApiReturns401Json() throws Exception {
+        when(request.getServletPath()).thenReturn("/api/connections");
+        when(request.getSession(false)).thenReturn(null);
+        filter.doFilterInternal(request, response, filterChain);
+        verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(response).setContentType("application/json;charset=UTF-8");
+        verify(filterChain, never()).doFilter(any(), any());
+        assert responseBody.toString().contains("未登录");
     }
 
     @Test
@@ -92,6 +144,30 @@ class ConsoleAuthFilterTest {
     }
 
     @Test
+    void authenticatedApiPostWithCsrfHeaderPassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/api/connections");
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getSession(false)).thenReturn(session);
+        when(session.getAttribute(ConsoleAuthFilter.SESSION_AUTH_KEY)).thenReturn(true);
+        when(session.getAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY)).thenReturn("valid-token");
+        when(request.getHeader(ConsoleAuthFilter.CSRF_HEADER)).thenReturn("valid-token");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void authenticatedApiPutWithCsrfHeaderPassesThrough() throws Exception {
+        when(request.getServletPath()).thenReturn("/api/connections/1");
+        when(request.getMethod()).thenReturn("PUT");
+        when(request.getSession(false)).thenReturn(session);
+        when(session.getAttribute(ConsoleAuthFilter.SESSION_AUTH_KEY)).thenReturn(true);
+        when(session.getAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY)).thenReturn("valid-token");
+        when(request.getHeader(ConsoleAuthFilter.CSRF_HEADER)).thenReturn("valid-token");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
     void invalidCsrfTokenRejected() throws Exception {
         when(request.getServletPath()).thenReturn("/connections");
         when(request.getMethod()).thenReturn("POST");
@@ -101,6 +177,19 @@ class ConsoleAuthFilterTest {
         when(request.getParameter(ConsoleAuthFilter.CSRF_FIELD)).thenReturn("wrong-token");
         filter.doFilterInternal(request, response, filterChain);
         verify(response).sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token");
+    }
+
+    @Test
+    void invalidApiCsrfTokenReturns403Json() throws Exception {
+        when(request.getServletPath()).thenReturn("/api/connections");
+        when(request.getMethod()).thenReturn("DELETE");
+        when(request.getSession(false)).thenReturn(session);
+        when(session.getAttribute(ConsoleAuthFilter.SESSION_AUTH_KEY)).thenReturn(true);
+        when(session.getAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY)).thenReturn("valid-token");
+        when(request.getHeader(ConsoleAuthFilter.CSRF_HEADER)).thenReturn("wrong-token");
+        filter.doFilterInternal(request, response, filterChain);
+        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        assert responseBody.toString().contains("Invalid CSRF token");
     }
 
     @Test
@@ -171,7 +260,18 @@ class ConsoleAuthFilterTest {
     }
 
     @Test
+    void isPublicPathMatchesApiAuth() {
+        assert filter.isPublicPath("/api/auth/login");
+        assert filter.isPublicPath("/api/auth/me");
+    }
+
+    @Test
     void isPublicPathRejectsDashboard() {
         assert !filter.isPublicPath("/dashboard");
+    }
+
+    @Test
+    void isPublicPathRejectsApiConnections() {
+        assert !filter.isPublicPath("/api/connections");
     }
 }

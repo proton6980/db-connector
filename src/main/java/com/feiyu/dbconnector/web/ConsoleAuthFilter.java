@@ -18,10 +18,13 @@ import java.util.Set;
 public class ConsoleAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ConsoleAuthFilter.class);
-    static final String SESSION_AUTH_KEY = "console_authed";
-    static final String SESSION_CSRF_KEY = "console_csrf";
+    public static final String SESSION_AUTH_KEY = "console_authed";
+    public static final String SESSION_CSRF_KEY = "console_csrf";
+    public static final String CSRF_HEADER = "X-CSRF-TOKEN";
     static final String CSRF_FIELD = "_csrf";
-    static final Set<String> PUBLIC_PATHS = Set.of("/login", "/css/", "/webjars/");
+    static final Set<String> PUBLIC_PATHS = Set.of(
+            "/login", "/css/", "/js/", "/webjars/", "/index.html", "/login.html",
+            "/api/auth/login", "/api/auth/me");
 
     private final ConsoleProperties properties;
     private final SecureRandom random = new SecureRandom();
@@ -48,17 +51,28 @@ public class ConsoleAuthFilter extends OncePerRequestFilter {
 
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute(SESSION_AUTH_KEY) == null) {
-            response.sendRedirect("/login");
+            if (isApiPath(path)) {
+                writeJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "未登录");
+            } else {
+                response.sendRedirect("/login");
+            }
             return;
         }
 
-        if ("POST".equalsIgnoreCase(request.getMethod())) {
-            String csrfToken = request.getParameter(CSRF_FIELD);
+        if (isMutatingMethod(request.getMethod())) {
+            String csrfToken = request.getHeader(CSRF_HEADER);
+            if (csrfToken == null) {
+                csrfToken = request.getParameter(CSRF_FIELD);
+            }
             String sessionCsrf = (String) session.getAttribute(SESSION_CSRF_KEY);
             if (sessionCsrf == null || !MessageDigest.isEqual(
                     csrfToken == null ? new byte[0] : csrfToken.getBytes(),
                     sessionCsrf.getBytes())) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token");
+                if (isApiPath(path)) {
+                    writeJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token");
+                } else {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token");
+                }
                 return;
             }
             ensureCsrfToken(session);
@@ -69,6 +83,17 @@ public class ConsoleAuthFilter extends OncePerRequestFilter {
 
     boolean isPublicPath(String path) {
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+    }
+
+    boolean isApiPath(String path) {
+        return path != null && path.startsWith("/api/");
+    }
+
+    boolean isMutatingMethod(String method) {
+        return "POST".equalsIgnoreCase(method)
+                || "PUT".equalsIgnoreCase(method)
+                || "DELETE".equalsIgnoreCase(method)
+                || "PATCH".equalsIgnoreCase(method);
     }
 
     void ensureCsrfToken(HttpSession session) {
@@ -86,5 +111,11 @@ public class ConsoleAuthFilter extends OncePerRequestFilter {
         return MessageDigest.isEqual(
                 input.getBytes(),
                 properties.getPassword().getBytes());
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"error\":\"" + message + "\"}");
     }
 }

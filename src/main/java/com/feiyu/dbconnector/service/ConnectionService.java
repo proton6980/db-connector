@@ -50,6 +50,12 @@ public class ConnectionService {
         return repository.findAll();
     }
 
+    /** 按 ID 获取连接（含停用）；不存在抛 CONNECTION_NOT_FOUND。 */
+    public DbConnection getById(String id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new BizException(ErrorCode.CONNECTION_NOT_FOUND, "连接不存在: " + id));
+    }
+
     /** 只读连接池（池级 readOnly，防御层之一）。 */
     public HikariDataSource readOnlyDataSource(DbConnection c) {
         String dbType = c.getDbType() == null ? "" : c.getDbType().toUpperCase();
