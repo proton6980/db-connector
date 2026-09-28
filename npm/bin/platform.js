@@ -1,4 +1,4 @@
-const RELEASE_TAG = "v0.1.0-native";
+const RELEASE_TAG = "v0.1.0";
 const GITHUB_REPO = "proton6980/db-connector";
 const BASE_URL = `https://github.com/${GITHUB_REPO}/releases/download/${RELEASE_TAG}`;
 

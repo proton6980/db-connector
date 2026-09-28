@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $Repo = "proton6980/db-connector"
-$ReleaseTag = "v0.1.0-native"
+$ReleaseTag = "v0.1.0"
 $InstallDir = "$env:USERPROFILE\.db-connector-mcp"
 
 $Os = "windows"

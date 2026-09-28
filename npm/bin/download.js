@@ -74,7 +74,7 @@ async function main() {
     console.error(`Unsupported platform: ${key}`);
     console.error(`Supported platforms: ${supported}`);
     console.error("You can download binaries manually from:");
-    console.error("  https://github.com/proton6980/db-connector/releases/tag/v0.1.0-native");
+    console.error("  https://github.com/proton6980/db-connector/releases/tag/v0.1.0");
     process.exit(1);
   }
 
