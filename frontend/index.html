@@ -39,21 +39,48 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
     import { api } from './js/api.js';
+    import { alert } from './js/alert.js';
     import { startRouter, setActiveNav } from './js/router.js';
 
     document.getElementById('logout-btn').addEventListener('click', async () => {
         try {
             await api.post('/api/auth/logout');
-        } catch (_) {
-            // still clear local state and leave
+            api.clearAuth();
+            window.location.href = '/login.html';
+        } catch (err) {
+            alert.error(err.message || '退出失败');
+            try {
+                const me = await api.get('/api/auth/me');
+                if (me.csrf) {
+                    api.setCsrf(me.csrf);
+                }
+            } catch (_) {
+                // keep existing local csrf if /me also fails
+            }
         }
-        api.clearAuth();
-        window.location.href = '/login.html';
     });
 
-    window.addEventListener('hashchange', setActiveNav);
-    setActiveNav();
-    startRouter(document.getElementById('app'));
+    async function bootstrap() {
+        try {
+            const me = await api.get('/api/auth/me');
+            if (me.csrf) {
+                api.setCsrf(me.csrf);
+            }
+            if (!me.authenticated && me.passwordConfigured) {
+                window.location.href = '/login.html';
+                return;
+            }
+        } catch (_) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        window.addEventListener('hashchange', setActiveNav);
+        setActiveNav();
+        startRouter(document.getElementById('app'));
+    }
+
+    bootstrap();
 </script>
 </body>
 </html>

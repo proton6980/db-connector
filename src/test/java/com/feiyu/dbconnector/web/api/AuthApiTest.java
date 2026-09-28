@@ -57,7 +57,8 @@ class AuthApiTest {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.authenticated").value(false))
-                .andExpect(jsonPath("$.passwordConfigured").value(true));
+                .andExpect(jsonPath("$.passwordConfigured").value(true))
+                .andExpect(jsonPath("$.csrf").doesNotExist());
     }
 
     @Test
@@ -68,7 +69,21 @@ class AuthApiTest {
 
         mockMvc.perform(get("/api/auth/me").session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.authenticated").value(true));
+                .andExpect(jsonPath("$.authenticated").value(true))
+                .andExpect(jsonPath("$.csrf").isString());
+    }
+
+    @Test
+    void meAuthenticatedReusesExistingCsrf() throws Exception {
+        when(consoleProperties.isPasswordConfigured()).thenReturn(true);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(ConsoleAuthFilter.SESSION_AUTH_KEY, true);
+        session.setAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY, "existing-csrf-token");
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated").value(true))
+                .andExpect(jsonPath("$.csrf").value("existing-csrf-token"));
     }
 
     @Test
@@ -78,7 +93,8 @@ class AuthApiTest {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.authenticated").value(true))
-                .andExpect(jsonPath("$.passwordConfigured").value(false));
+                .andExpect(jsonPath("$.passwordConfigured").value(false))
+                .andExpect(jsonPath("$.csrf").isString());
     }
 
     @Test

@@ -48,6 +48,9 @@
     async function bootstrap() {
         try {
             const me = await api.get('/api/auth/me');
+            if (me.csrf) {
+                api.setCsrf(me.csrf);
+            }
             if (me.authenticated) {
                 goApp();
                 return;

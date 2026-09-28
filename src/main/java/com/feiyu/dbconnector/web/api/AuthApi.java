@@ -55,6 +55,10 @@ public class AuthApi {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("authenticated", authenticated);
         result.put("passwordConfigured", properties.isPasswordConfigured());
+        if (authenticated) {
+            ConsoleAuthSupport.ensureCsrfToken(session);
+            result.put("csrf", session.getAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY));
+        }
         return result;
     }
 }
