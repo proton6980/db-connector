@@ -92,11 +92,38 @@ async function request(method, path, body) {
     return data;
 }
 
+async function getBlob(path) {
+    const response = await fetch(BASE_URL + path, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: '*/*' },
+    });
+
+    if (response.status === 401) {
+        redirectToLogin();
+        const data = await parseBody(response);
+        const err = new Error(errorMessage(data, '未登录或会话已过期'));
+        err.status = 401;
+        err.body = data;
+        throw err;
+    }
+
+    if (!response.ok) {
+        const data = await parseBody(response);
+        const err = new Error(errorMessage(data, `请求失败 (${response.status})`));
+        err.status = response.status;
+        err.body = data;
+        throw err;
+    }
+    return response.blob();
+}
+
 export const api = {
     get: (path) => request('GET', path),
     post: (path, body) => request('POST', path, body ?? {}),
     put: (path, body) => request('PUT', path, body ?? {}),
     delete: (path, body) => request('DELETE', path, body),
+    getBlob,
     setCsrf,
     clearAuth,
     getCsrf,

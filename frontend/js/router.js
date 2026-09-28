@@ -20,11 +20,13 @@ const routes = [
 ];
 
 let appEl = null;
+let navGeneration = 0;
 
 function currentPath() {
     const hash = window.location.hash || '';
     const raw = hash.startsWith('#') ? hash.slice(1) : hash;
-    return raw.startsWith('/') ? raw : `/${raw}`;
+    const pathOnly = raw.split('?')[0];
+    return pathOnly.startsWith('/') ? pathOnly : `/${pathOnly}`;
 }
 
 export function setActiveNav() {
@@ -40,10 +42,16 @@ export function setActiveNav() {
     });
 }
 
+function showLoadError(message) {
+    appEl.innerHTML = '<div class="alert alert-danger" role="alert"></div>';
+    appEl.querySelector('.alert').textContent = message || '页面加载失败';
+}
+
 async function navigate() {
     if (!appEl) {
         return;
     }
+    const token = ++navGeneration;
     let path = currentPath();
     if (!path || path === '/') {
         window.location.hash = '#/dashboard';
@@ -54,12 +62,27 @@ async function navigate() {
         const match = path.match(route.pattern);
         if (match) {
             setActiveNav();
-            appEl.innerHTML = '';
-            await route.handler(appEl, match);
+            const mount = document.createElement('div');
+            try {
+                await route.handler(mount, match);
+            } catch (err) {
+                if (token !== navGeneration) {
+                    return;
+                }
+                showLoadError(err.message || '页面加载失败');
+                return;
+            }
+            if (token !== navGeneration) {
+                return;
+            }
+            appEl.replaceChildren(...mount.childNodes);
             return;
         }
     }
 
+    if (token !== navGeneration) {
+        return;
+    }
     setActiveNav();
     appEl.innerHTML = `
         <div class="alert alert-warning">
