@@ -66,15 +66,12 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y upx-ucl
 
-      - name: Install UPX (macOS)
-        if: runner.os == 'macOS'
-        run: brew install upx
-
       - name: Install UPX (Windows)
         if: runner.os == 'Windows'
         run: choco install upx -y
 
-      - name: Compress with UPX
+      - name: Compress with UPX (Linux/Windows)
+        if: runner.os != 'macOS'
         run: upx --best target/${{ matrix.artifact }}
 
       - name: Report Size
