@@ -78,8 +78,9 @@ jobs:
         run: upx --best target/${{ matrix.artifact }}
 
       - name: Report Size
+        shell: bash
         run: |
-          ls -lh target/${{ matrix.artifact }} || dir target\\${{ matrix.artifact }}
+          ls -lh target/${{ matrix.artifact }}
 
       - name: Upload Release Asset
         if: github.event_name == 'release'
