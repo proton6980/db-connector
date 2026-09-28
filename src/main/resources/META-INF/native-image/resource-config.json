@@ -2,6 +2,15 @@
   "resources": {
     "includes": [
       {
+        "pattern": "\\Qsun/nio/cs/ext/GB18030.class\\E"
+      },
+      {
+        "pattern": "\\Qsun/nio/cs/ext/GBK.class\\E"
+      },
+      {
+        "pattern": "\\Qsun/nio/cs/ext/GB18030.properties\\E"
+      },
+      {
         "pattern": "\\QMETA-INF/build-info.properties\\E"
       },
       {

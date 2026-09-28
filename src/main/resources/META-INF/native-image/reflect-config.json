@@ -5395,6 +5395,16 @@
     "name": "java.nio.charset.Charset"
   },
   {
+    "name": "sun.nio.cs.ext.GB18030",
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "sun.nio.cs.ext.GBK",
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
     "name": "java.nio.file.Path"
   },
   {
