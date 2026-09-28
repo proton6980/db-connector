@@ -23,4 +23,5 @@ logging:
 
 dbconnector:
   crypto:
-    key: ${DBCONNECTOR_CRYPTO_KEY:dev-key-change-me}
+    # 与 application.yml 一致：未设置时由 AesCredentialCipher 回退到开发密钥；prod 必须注入
+    key: ${DBCONNECTOR_CRYPTO_KEY:}

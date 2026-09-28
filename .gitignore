@@ -32,7 +32,7 @@ target/
 
 # macOS
 .DS_Store
-/plan/
+/plans/
 /data/
 !data/.gitkeep
 opencode.json
