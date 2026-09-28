@@ -1,0 +1,44 @@
+name: Native Image CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - '.github/workflows/native-ci.yml'
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  native-compile-check:
+    runs-on: ubuntu-24.04
+    name: Verify Native Compile (Linux x64)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compile Native Image
+        run: mvn -Pnative native:compile -DskipTests
+
+      - name: Smoke Test (Web mode)
+        run: |
+          ./target/db-connector &
+          APP_PID=$!
+          sleep 5
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/)
+          kill $APP_PID 2>/dev/null || true
+          if [ "$HTTP_CODE" != "302" ]; then
+            echo "Smoke test failed: HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "Smoke test passed: HTTP $HTTP_CODE"

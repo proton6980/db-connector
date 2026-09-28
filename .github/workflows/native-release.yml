@@ -1,0 +1,77 @@
+name: Native Image Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v0.1.0). Leave empty to use SNAPSHOT.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            label: linux-x64
+            artifact: db-connector-linux-x64
+          - os: macos-15
+            label: darwin-arm64
+            artifact: db-connector-darwin-arm64
+          - os: macos-13
+            label: darwin-x64
+            artifact: db-connector-darwin-x64
+          - os: windows-2022
+            label: windows-x64
+            artifact: db-connector-windows-x64.exe
+
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.label }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify GraalVM
+        run: |
+          java -version
+          native-image --version
+
+      - name: Build Native Image (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mvn -Pnative native:compile -DskipTests
+          mv target/db-connector target/${{ matrix.artifact }}
+
+      - name: Build Native Image (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mvn -Pnative native:compile -DskipTests
+          mv target/db-connector.exe target/${{ matrix.artifact }}
+
+      - name: Upload Release Asset
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/${{ matrix.artifact }}
+
+      - name: Upload Artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: target/${{ matrix.artifact }}
+          retention-days: 30
