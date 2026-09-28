@@ -1,0 +1,46 @@
+{
+  "name": "db-connector-mcp",
+  "version": "0.1.0",
+  "description": "Database Connector MCP Server - connect, query, and manage any database via MCP protocol",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "database",
+    "sql",
+    "connector",
+    "jdbc"
+  ],
+  "author": "feiyu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/proton6980/db-connector"
+  },
+  "homepage": "https://github.com/proton6980/db-connector",
+  "bugs": {
+    "url": "https://github.com/proton6980/db-connector/issues"
+  },
+  "bin": {
+    "db-connector-mcp": "./bin/run.js"
+  },
+  "scripts": {
+    "postinstall": "node ./bin/download.js"
+  },
+  "files": [
+    "bin/run.js",
+    "bin/download.js",
+    "bin/platform.js"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

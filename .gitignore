@@ -36,3 +36,6 @@ target/
 /data/
 !data/.gitkeep
 opencode.json
+npm/bin/native/
+npm/data/
+npm/node_modules/
