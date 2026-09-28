@@ -13,9 +13,7 @@ public class WebConfig {
     public FilterRegistrationBean<ConsoleAuthFilter> consoleAuthFilter(ConsoleProperties properties) {
         ConsoleAuthFilter filter = new ConsoleAuthFilter(properties);
         FilterRegistrationBean<ConsoleAuthFilter> registration = new FilterRegistrationBean<>(filter);
-        registration.addUrlPatterns(
-                "/dashboard", "/connections/*", "/connections", "/logs/*", "/logs",
-                "/api/*");
+        registration.addUrlPatterns("/api/*");
         registration.setOrder(1);
         return registration;
     }

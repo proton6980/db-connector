@@ -11,7 +11,6 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.ModelAndView;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -23,56 +22,26 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BizException.class)
-    public Object handleBiz(BizException ex, HttpServletRequest request) {
+    public ResponseEntity<Map<String, String>> handleBiz(BizException ex, HttpServletRequest request) {
         HttpStatus status = ex.getCode().isNotFound() ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-        if (isApiRequest(request)) {
-            return ResponseEntity.status(status).body(errorBody(ex.getMessage()));
-        }
-        ModelAndView mv = new ModelAndView("error");
-        mv.addObject("status", status.value());
-        mv.addObject("message", ex.toLlmMessage());
-        return mv;
+        return ResponseEntity.status(status).body(errorBody(ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Object handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex,
+                                                                HttpServletRequest request) {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(FieldError::getDefaultMessage)
                 .orElse("参数校验失败");
-        if (isApiRequest(request)) {
-            return ResponseEntity.badRequest().body(errorBody(message));
-        }
-        ModelAndView mv = new ModelAndView("error");
-        mv.addObject("status", 400);
-        mv.addObject("message", message);
-        return mv;
+        return ResponseEntity.badRequest().body(errorBody(message));
     }
 
     @ExceptionHandler(Exception.class)
-    public Object handleGeneric(Exception ex, HttpServletRequest request) {
+    public ResponseEntity<Map<String, String>> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception on {}", request.getRequestURI(), ex);
-        if (isApiRequest(request)) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(errorBody("服务器内部错误"));
-        }
-        ModelAndView mv = new ModelAndView("error");
-        mv.addObject("status", 500);
-        mv.addObject("message", "服务器内部错误");
-        return mv;
-    }
-
-    private boolean isApiRequest(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        if (path != null && path.startsWith("/api/")) {
-            return true;
-        }
-        String accept = request.getHeader("Accept");
-        if (accept != null && accept.contains("application/json")) {
-            return true;
-        }
-        String contentType = request.getContentType();
-        return contentType != null && contentType.contains("application/json");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(errorBody("服务器内部错误"));
     }
 
     private Map<String, String> errorBody(String message) {

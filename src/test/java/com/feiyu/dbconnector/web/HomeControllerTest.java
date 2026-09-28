@@ -15,9 +15,9 @@ class HomeControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void rootRedirectsToDashboard() throws Exception {
+    void rootRedirectsToIndexHtml() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/dashboard"));
+                .andExpect(redirectedUrl("/index.html"));
     }
 }
