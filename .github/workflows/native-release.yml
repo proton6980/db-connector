@@ -62,6 +62,25 @@ jobs:
           mvn -Pnative native:compile -DskipTests
           mv target/db-connector.exe target/${{ matrix.artifact }}
 
+      - name: Install UPX (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y upx-ucl
+
+      - name: Install UPX (macOS)
+        if: runner.os == 'macOS'
+        run: brew install upx
+
+      - name: Install UPX (Windows)
+        if: runner.os == 'Windows'
+        run: choco install upx -y
+
+      - name: Compress with UPX
+        run: upx --best target/${{ matrix.artifact }}
+
+      - name: Report Size
+        run: |
+          ls -lh target/${{ matrix.artifact }} || dir target\\${{ matrix.artifact }}
+
       - name: Upload Release Asset
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
