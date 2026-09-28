@@ -1,3 +1,6 @@
+# 默认 Profile：Streamable HTTP 模式（含 Web 管理控制台）
+# STDIO 模式请使用 --spring.profiles.active=stdio（见 application-stdio.yml）
+
 spring:
   application:
     name: db-connector
@@ -22,6 +25,7 @@ spring:
         version: 0.0.1
         # Streamable HTTP 传输（MCP 2025-03-26 规范），端点默认 /mcp
         # 兼容 Grok CLI / OpenCode / Claude Code 等新客户端
+        # STDIO 模式请激活 stdio profile（--spring.profiles.active=stdio）
         protocol: STREAMABLE
 
 server:

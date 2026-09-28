@@ -3,6 +3,7 @@ package com.feiyu.dbconnector.web.connection;
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.service.ConnectionService;
 import jakarta.validation.Valid;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -15,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 
 @Controller
+@ConditionalOnWebApplication
 public class ConnectionController {
 
     private static final List<String> DB_TYPES = List.of("DM", "H2");

@@ -1,0 +1,26 @@
+# STDIO 传输模式：MCP 客户端（Cursor/Claude Code）通过 stdin/stdout 与本进程通信
+# 同时启动 Web 控制台（HTTP），开发者可在浏览器中查看审计日志、管理连接
+# 激活方式：java -jar db-connector.jar --spring.profiles.active=stdio
+# 或通过 bin/db-connector 启动脚本
+
+spring:
+  main:
+    banner-mode: off
+  ai:
+    mcp:
+      server:
+        protocol: STDIO
+
+server:
+  port: ${CONSOLE_PORT:8080}
+  address: 127.0.0.1
+
+logging:
+  file:
+    name: ./data/dbconnector.log
+  pattern:
+    console: ""
+
+dbconnector:
+  crypto:
+    key: ${DBCONNECTOR_CRYPTO_KEY:dev-key-change-me}

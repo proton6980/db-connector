@@ -7,6 +7,7 @@ import com.feiyu.dbconnector.repository.DbConnectionRepository;
 import com.feiyu.dbconnector.repository.SqlAuditLogRepository;
 import com.feiyu.dbconnector.web.ConsoleProperties;
 import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
+@ConditionalOnWebApplication
 public class DashboardController {
 
     private final SqlAuditLogRepository auditRepo;

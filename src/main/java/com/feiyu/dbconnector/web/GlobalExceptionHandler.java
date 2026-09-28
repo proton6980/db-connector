@@ -1,11 +1,13 @@
 package com.feiyu.dbconnector.web;
 
 import com.feiyu.dbconnector.common.BizException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
 
 @ControllerAdvice(basePackages = "com.feiyu.dbconnector.web")
+@ConditionalOnWebApplication
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)

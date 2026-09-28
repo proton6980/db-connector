@@ -1,0 +1,37 @@
+#!/bin/bash
+#===============================================================================
+# db-connector — MCP STDIO Launcher
+#
+# MCP 客户端（Cursor / Claude Code / VS Code）通过 stdin/stdout 与此进程通信。
+#
+# 用法示例（Cursor .cursor/mcp.json）:
+#   {
+#     "mcpServers": {
+#       "db-connector": {
+#         "command": "sh",
+#         "args": ["/path/to/db-connector/bin/db-connector"],
+#         "env": { "DBCONNECTOR_CRYPTO_KEY": "your-key" }
+#       }
+#     }
+#   }
+#===============================================================================
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VERSION="${DB_CONNECTOR_VERSION:-0.0.1-SNAPSHOT}"
+JAR_FILE="$PROJECT_DIR/target/db-connector-${VERSION}.jar"
+
+if [ ! -f "$JAR_FILE" ]; then
+    echo "[db-connector] JAR not found at $JAR_FILE, building..." >&2
+    cd "$PROJECT_DIR"
+    if [ -f "./mvnw" ]; then
+        ./mvnw package -DskipTests -q >&2
+    else
+        mvn package -DskipTests -q >&2
+    fi
+fi
+
+mkdir -p "$PROJECT_DIR/data"
+
+exec java -jar "$JAR_FILE" --spring.profiles.active=stdio 2>"$PROJECT_DIR/data/dbconnector.log"

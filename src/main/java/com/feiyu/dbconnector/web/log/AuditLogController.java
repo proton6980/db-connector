@@ -5,6 +5,7 @@ import com.feiyu.dbconnector.entity.SqlAuditLog;
 import com.feiyu.dbconnector.repository.DbConnectionRepository;
 import com.feiyu.dbconnector.repository.SqlAuditLogRepository;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
@@ -22,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Controller
+@ConditionalOnWebApplication
 public class AuditLogController {
 
     private static final int CSV_MAX_ROWS = 10000;
