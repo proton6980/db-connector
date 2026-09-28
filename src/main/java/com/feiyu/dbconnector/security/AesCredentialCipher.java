@@ -19,7 +19,8 @@ import java.util.Base64;
 @Component
 public class AesCredentialCipher {
 
-    private static final String DEV_KEY = "dev-only-key";
+    /** 与历史 STDIO 默认密钥一致，避免本地 ./data 中已加密凭证因空配置回退值变化而无法解密。 */
+    private static final String DEV_KEY = "dev-key-change-me";
     private static final byte VERSION = 1;
     private static final String PREFIX = "v" + VERSION + ":";
     private static final int GCM_IV_BYTES = 12;
