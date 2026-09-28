@@ -20,9 +20,9 @@ public class ConsoleTools {
         return """
                 Web 管理控制台已就绪，请在浏览器中打开：
 
-                仪表盘（QPS/错误率/Top SQL/连接池状态）：%s/dashboard
-                数据库连接管理（新增/编辑/测试/删除）：  %s/connections
-                SQL 审计日志（筛选/分页/详情/CSV 导出）：%s/logs
+                仪表盘（QPS/错误率/Top SQL/连接池状态）：%s/index.html#/dashboard
+                数据库连接管理（新增/编辑/测试/删除）：  %s/index.html#/connections
+                SQL 审计日志（筛选/分页/详情/CSV 导出）：%s/index.html#/logs
 
                 提示：如未设置登录口令，直接访问即可；如已设置，需输入口令后进入。
                 """.formatted(baseUrl, baseUrl, baseUrl).strip();
