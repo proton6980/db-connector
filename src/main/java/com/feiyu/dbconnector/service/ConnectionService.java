@@ -106,6 +106,19 @@ public class ConnectionService {
         return repository.save(c);
     }
 
+    public DbConnection create(String id, ConnectionForm form) {
+        if (repository.existsById(id)) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "连接 ID 已存在: " + id);
+        }
+        if (repository.existsByName(form.getName())) {
+            throw new BizException(ErrorCode.VALIDATION_ERROR, "连接名称已存在: " + form.getName());
+        }
+        DbConnection c = new DbConnection();
+        c.setId(id);
+        applyForm(c, form);
+        return repository.save(c);
+    }
+
     public DbConnection update(String id, ConnectionForm form) {
         DbConnection c = repository.findById(id)
                 .orElseThrow(() -> new BizException(ErrorCode.CONNECTION_NOT_FOUND, "连接不存在: " + id));
