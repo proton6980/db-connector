@@ -13,7 +13,7 @@
 
     <groupId>com.feiyu</groupId>
     <artifactId>db-connector</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
     <name>db-connector</name>
     <description>DB Connector</description>
 
