@@ -49,7 +49,7 @@ cd db-connector
 # 1. 密钥（dev 可省略，默认开发密钥；生产必须通过环境变量注入）
 export DBCONNECTOR_CRYPTO_KEY='your-secret'
 
-# 2. 启动（连接配置在 application.yml 的 dbconnector.seed，启动时加密入库）
+# 2. 启动（首次使用请在控制台 http://127.0.0.1:8080 添加数据库连接）
 java -jar target/db-connector-0.0.1-SNAPSHOT.jar
 
 # 3. 访问控制台
