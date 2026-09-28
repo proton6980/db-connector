@@ -116,7 +116,6 @@
                         <buildArg>--no-fallback</buildArg>
                         <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                         <buildArg>-H:-CheckToolchain</buildArg>
-                        <buildArg>-H:+ReduceDuplicateResources</buildArg>
                         <buildArg>-H:+RemoveSaturatedTypeFlows</buildArg>
                     </buildArgs>
                 </configuration>
