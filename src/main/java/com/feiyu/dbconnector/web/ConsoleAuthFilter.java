@@ -5,29 +5,23 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
-import java.util.HexFormat;
 import java.util.Set;
 
 public class ConsoleAuthFilter extends OncePerRequestFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(ConsoleAuthFilter.class);
     public static final String SESSION_AUTH_KEY = "console_authed";
     public static final String SESSION_CSRF_KEY = "console_csrf";
     public static final String CSRF_HEADER = "X-CSRF-TOKEN";
     static final String CSRF_FIELD = "_csrf";
-    static final Set<String> PUBLIC_PATHS = Set.of(
-            "/login", "/css/", "/js/", "/webjars/", "/index.html", "/login.html",
-            "/api/auth/login", "/api/auth/me");
+    static final Set<String> PUBLIC_PREFIXES = Set.of("/login", "/css/", "/js/", "/webjars/");
+    static final Set<String> PUBLIC_EXACT = Set.of(
+            "/index.html", "/login.html", "/api/auth/login", "/api/auth/me");
 
     private final ConsoleProperties properties;
-    private final SecureRandom random = new SecureRandom();
 
     public ConsoleAuthFilter(ConsoleProperties properties) {
         this.properties = properties;
@@ -44,7 +38,7 @@ public class ConsoleAuthFilter extends OncePerRequestFilter {
         }
 
         if (!properties.isPasswordConfigured()) {
-            ensureCsrfToken(request.getSession(true));
+            ConsoleAuthSupport.ensureCsrfToken(request.getSession(true));
             filterChain.doFilter(request, response);
             return;
         }
@@ -75,14 +69,20 @@ public class ConsoleAuthFilter extends OncePerRequestFilter {
                 }
                 return;
             }
-            ensureCsrfToken(session);
+            ConsoleAuthSupport.ensureCsrfToken(session);
         }
 
         filterChain.doFilter(request, response);
     }
 
     boolean isPublicPath(String path) {
-        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+        if (path == null) {
+            return false;
+        }
+        if (PUBLIC_EXACT.contains(path)) {
+            return true;
+        }
+        return PUBLIC_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     boolean isApiPath(String path) {
@@ -97,20 +97,11 @@ public class ConsoleAuthFilter extends OncePerRequestFilter {
     }
 
     void ensureCsrfToken(HttpSession session) {
-        if (session.getAttribute(SESSION_CSRF_KEY) == null) {
-            byte[] bytes = new byte[32];
-            random.nextBytes(bytes);
-            session.setAttribute(SESSION_CSRF_KEY, HexFormat.of().formatHex(bytes));
-        }
+        ConsoleAuthSupport.ensureCsrfToken(session);
     }
 
     boolean checkPassword(String input) {
-        if (!properties.isPasswordConfigured()) {
-            return true;
-        }
-        return MessageDigest.isEqual(
-                input.getBytes(),
-                properties.getPassword().getBytes());
+        return ConsoleAuthSupport.checkPassword(properties, input);
     }
 
     private void writeJsonError(HttpServletResponse response, int status, String message) throws IOException {

@@ -98,7 +98,7 @@ class AuditLogControllerTest {
 
         mockMvc.perform(get("/logs/export"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "text/csv"))
+                .andExpect(header().string("Content-Type", "text/csv;charset=UTF-8"))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=audit_log.csv"));
     }
 

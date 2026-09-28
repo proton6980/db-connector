@@ -260,9 +260,16 @@ class ConsoleAuthFilterTest {
     }
 
     @Test
-    void isPublicPathMatchesApiAuth() {
+    void isPublicPathMatchesApiAuthExact() {
         assert filter.isPublicPath("/api/auth/login");
         assert filter.isPublicPath("/api/auth/me");
+    }
+
+    @Test
+    void isPublicPathRejectsApiAuthPrefixExtensions() {
+        assert !filter.isPublicPath("/api/auth/login/extra");
+        assert !filter.isPublicPath("/api/auth/me/extra");
+        assert !filter.isPublicPath("/api/auth/logout");
     }
 
     @Test

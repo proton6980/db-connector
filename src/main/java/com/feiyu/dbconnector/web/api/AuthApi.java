@@ -1,6 +1,7 @@
 package com.feiyu.dbconnector.web.api;
 
 import com.feiyu.dbconnector.web.ConsoleAuthFilter;
+import com.feiyu.dbconnector.web.ConsoleAuthSupport;
 import com.feiyu.dbconnector.web.ConsoleProperties;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -12,9 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -24,7 +22,6 @@ import java.util.Map;
 public class AuthApi {
 
     private final ConsoleProperties properties;
-    private final SecureRandom random = new SecureRandom();
 
     public AuthApi(ConsoleProperties properties) {
         this.properties = properties;
@@ -33,12 +30,12 @@ public class AuthApi {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> body, HttpSession session) {
         String password = body != null ? body.get("password") : null;
-        if (!checkPassword(password)) {
+        if (!ConsoleAuthSupport.checkPassword(properties, password)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "口令错误"));
         }
         session.setAttribute(ConsoleAuthFilter.SESSION_AUTH_KEY, true);
-        ensureCsrfToken(session);
+        ConsoleAuthSupport.ensureCsrfToken(session);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("ok", true);
         result.put("csrf", session.getAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY));
@@ -59,25 +56,5 @@ public class AuthApi {
         result.put("authenticated", authenticated);
         result.put("passwordConfigured", properties.isPasswordConfigured());
         return result;
-    }
-
-    private void ensureCsrfToken(HttpSession session) {
-        if (session.getAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY) == null) {
-            byte[] bytes = new byte[32];
-            random.nextBytes(bytes);
-            session.setAttribute(ConsoleAuthFilter.SESSION_CSRF_KEY, HexFormat.of().formatHex(bytes));
-        }
-    }
-
-    private boolean checkPassword(String input) {
-        if (!properties.isPasswordConfigured()) {
-            return true;
-        }
-        if (input == null) {
-            return false;
-        }
-        return MessageDigest.isEqual(
-                input.getBytes(),
-                properties.getPassword().getBytes());
     }
 }

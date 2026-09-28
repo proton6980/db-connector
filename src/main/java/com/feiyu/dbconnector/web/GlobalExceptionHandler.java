@@ -2,6 +2,8 @@ package com.feiyu.dbconnector.web;
 
 import com.feiyu.dbconnector.common.BizException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +20,16 @@ import java.util.Map;
 @ConditionalOnWebApplication
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(BizException.class)
     public Object handleBiz(BizException ex, HttpServletRequest request) {
+        HttpStatus status = ex.getCode().isNotFound() ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
         if (isApiRequest(request)) {
-            return ResponseEntity.badRequest().body(errorBody(ex.getMessage()));
+            return ResponseEntity.status(status).body(errorBody(ex.getMessage()));
         }
         ModelAndView mv = new ModelAndView("error");
-        mv.addObject("status", 400);
+        mv.addObject("status", status.value());
         mv.addObject("message", ex.toLlmMessage());
         return mv;
     }
@@ -44,19 +49,9 @@ public class GlobalExceptionHandler {
         return mv;
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public Object handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
-        if (isApiRequest(request)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody(ex.getMessage()));
-        }
-        ModelAndView mv = new ModelAndView("error");
-        mv.addObject("status", 400);
-        mv.addObject("message", ex.getMessage());
-        return mv;
-    }
-
     @ExceptionHandler(Exception.class)
     public Object handleGeneric(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception on {}", request.getRequestURI(), ex);
         if (isApiRequest(request)) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(errorBody("服务器内部错误"));

@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -117,8 +119,20 @@ class AuditLogApiTest {
 
         mockMvc.perform(get("/api/logs/export"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Type", "text/csv"))
+                .andExpect(header().string("Content-Type", "text/csv;charset=UTF-8"))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=audit_log.csv"));
+    }
+
+    @Test
+    void listCapsPageSize() throws Exception {
+        when(auditRepo.search(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));
+
+        mockMvc.perform(get("/api/logs").param("size", "999"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(100));
+
+        verify(auditRepo).search(any(), any(), any(), any(), any(), eq(PageRequest.of(0, 100)));
     }
 
     @Test

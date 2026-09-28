@@ -4,6 +4,7 @@ package com.feiyu.dbconnector.common;
 public enum ErrorCode {
     CONNECTION_NOT_FOUND("连接不存在"),
     CONNECTION_INACTIVE("连接已停用"),
+    AUDIT_LOG_NOT_FOUND("日志不存在"),
     SQL_REJECTED("SQL 被安全策略拒绝"),
     QUERY_TIMEOUT("查询超时"),
     QUERY_FAILED("查询执行失败"),
@@ -18,5 +19,9 @@ public enum ErrorCode {
 
     public String defaultMessage() {
         return defaultMessage;
+    }
+
+    public boolean isNotFound() {
+        return this == CONNECTION_NOT_FOUND || this == AUDIT_LOG_NOT_FOUND;
     }
 }

@@ -1,6 +1,7 @@
 package com.feiyu.dbconnector.web.log;
 
-import com.feiyu.dbconnector.entity.DbConnection;
+import com.feiyu.dbconnector.common.BizException;
+import com.feiyu.dbconnector.common.ErrorCode;
 import com.feiyu.dbconnector.entity.SqlAuditLog;
 import com.feiyu.dbconnector.repository.DbConnectionRepository;
 import com.feiyu.dbconnector.repository.SqlAuditLogRepository;
@@ -67,7 +68,7 @@ public class AuditLogController {
     @GetMapping("/logs/{id}")
     public String detail(@PathVariable Long id, Model model) {
         SqlAuditLog log = auditRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("日志不存在: " + id));
+                .orElseThrow(() -> new BizException(ErrorCode.AUDIT_LOG_NOT_FOUND, "日志不存在: " + id));
         model.addAttribute("log", log);
         return "logs/detail";
     }
@@ -85,7 +86,7 @@ public class AuditLogController {
                 connectionId, accountId, status, fromTime, toTime,
                 PageRequest.of(0, CSV_MAX_ROWS)).getContent();
 
-        response.setContentType("text/csv");
+        response.setContentType("text/csv;charset=UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=audit_log.csv");
 
         Writer writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);

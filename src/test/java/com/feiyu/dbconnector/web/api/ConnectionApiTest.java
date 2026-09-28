@@ -145,7 +145,7 @@ class ConnectionApiTest {
                 .thenThrow(new BizException(ErrorCode.CONNECTION_NOT_FOUND, "连接不存在: missing"));
 
         mockMvc.perform(get("/api/connections/missing"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("连接不存在: missing"));
     }
 }

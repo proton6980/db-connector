@@ -1,5 +1,7 @@
 package com.feiyu.dbconnector.web.api;
 
+import com.feiyu.dbconnector.common.BizException;
+import com.feiyu.dbconnector.common.ErrorCode;
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.entity.SqlAuditLog;
 import com.feiyu.dbconnector.repository.DbConnectionRepository;
@@ -30,6 +32,7 @@ import java.util.Map;
 public class AuditLogApi {
 
     private static final int CSV_MAX_ROWS = 10000;
+    private static final int MAX_PAGE_SIZE = 100;
     private static final DateTimeFormatter CSV_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final SqlAuditLogRepository auditRepo;
@@ -50,9 +53,11 @@ public class AuditLogApi {
                                     @RequestParam(defaultValue = "20") int size) {
         LocalDateTime fromTime = parseDateTime(from);
         LocalDateTime toTime = parseDateTime(to);
+        int pageNum = Math.max(page, 0);
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         Page<SqlAuditLog> logs = auditRepo.search(
                 connectionId, accountId, status, fromTime, toTime,
-                PageRequest.of(page, size));
+                PageRequest.of(pageNum, pageSize));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("content", logs.getContent());
@@ -87,7 +92,7 @@ public class AuditLogApi {
                 connectionId, accountId, status, fromTime, toTime,
                 PageRequest.of(0, CSV_MAX_ROWS)).getContent();
 
-        response.setContentType("text/csv");
+        response.setContentType("text/csv;charset=UTF-8");
         response.setHeader("Content-Disposition", "attachment; filename=audit_log.csv");
 
         Writer writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
@@ -115,7 +120,7 @@ public class AuditLogApi {
     @GetMapping("/{id}")
     public SqlAuditLog detail(@PathVariable Long id) {
         return auditRepo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("日志不存在: " + id));
+                .orElseThrow(() -> new BizException(ErrorCode.AUDIT_LOG_NOT_FOUND, "日志不存在: " + id));
     }
 
     private Map<String, Object> toFilterConnection(DbConnection c) {
