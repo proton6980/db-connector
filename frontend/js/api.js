@@ -115,6 +115,17 @@ async function getBlob(path) {
         err.body = data;
         throw err;
     }
+
+    const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+    // 200 with HTML/JSON is usually a login page or error payload, not a file download.
+    if (contentType.includes('application/json') || contentType.includes('text/html')) {
+        const data = await parseBody(response);
+        const err = new Error(errorMessage(data, '导出失败：服务器返回了非文件响应'));
+        err.status = response.status;
+        err.body = data;
+        throw err;
+    }
+
     return response.blob();
 }
 

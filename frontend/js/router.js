@@ -75,7 +75,8 @@ async function navigate() {
             if (token !== navGeneration) {
                 return;
             }
-            appEl.replaceChildren(...mount.childNodes);
+            // Keep mount as live parent so page closures over `container` stay valid.
+            appEl.replaceChildren(mount);
             return;
         }
     }

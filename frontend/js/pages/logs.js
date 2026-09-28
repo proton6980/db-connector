@@ -191,7 +191,10 @@ async function downloadCsv(filters) {
         const params = buildQuery(filters, { forExport: true });
         const qs = params.toString();
         const blob = await api.getBlob(`/api/logs/export${qs ? `?${qs}` : ''}`);
-        const url = URL.createObjectURL(blob);
+        const text = await blob.text();
+        const truncated = text.includes('# 结果已达上限');
+        const downloadBlob = new Blob([text], { type: blob.type || 'text/csv;charset=UTF-8' });
+        const url = URL.createObjectURL(downloadBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'audit_log.csv';
@@ -199,7 +202,11 @@ async function downloadCsv(filters) {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        alert.success('CSV 已开始下载');
+        if (truncated) {
+            alert.warning('CSV 已下载，但结果已达上限，请缩小筛选范围');
+        } else {
+            alert.success('CSV 已开始下载');
+        }
     } catch (err) {
         alert.error(err.message || '导出失败');
     }
