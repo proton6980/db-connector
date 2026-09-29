@@ -12,7 +12,7 @@
 
     <groupId>com.feiyu</groupId>
     <artifactId>db-connector</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <packaging>${packaging}</packaging>
     <name>db-connector</name>
     <description>DB Connector</description>
