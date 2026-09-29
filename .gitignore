@@ -29,6 +29,12 @@ target/
 # Release dist
 dist/
 
+# Build artifacts (annotation processor output)
+io/
+
+# Duplicate (npm/frontend is the primary)
+frontend/
+
 # IDE
 .idea/
 *.iml
