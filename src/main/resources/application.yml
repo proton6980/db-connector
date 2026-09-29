@@ -1,7 +1,8 @@
 micronaut:
   application:
     name: db-connector
-  banner: false
+  banner:
+    enabled: false
   mcp:
     server:
       transport: STDIO

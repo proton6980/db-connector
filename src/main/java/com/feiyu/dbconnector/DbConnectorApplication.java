@@ -4,7 +4,10 @@ import io.micronaut.runtime.Micronaut;
 
 public class DbConnectorApplication {
 
-    public static void main(String[] args) {
-        Micronaut.run(DbConnectorApplication.class, args);
+    static void main(String[] args) {
+        Micronaut.build(args)
+                .mainClass(DbConnectorApplication.class)
+                .banner(false)
+                .start();
     }
 }
