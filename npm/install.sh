@@ -2,7 +2,7 @@
 set -e
 
 REPO="proton6980/db-connector"
-RELEASE_TAG="v0.2.1"
+RELEASE_TAG="v0.2.2"
 INSTALL_DIR="${HOME}/.db-connector-mcp"
 
 DARWIN_ARM64="db-connector-darwin-arm64"
