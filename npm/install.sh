@@ -2,7 +2,7 @@
 set -e
 
 REPO="proton6980/db-connector"
-FALLBACK_TAG="v0.3.0"
+FALLBACK_TAG="v0.4.0"
 INSTALL_DIR="${HOME}/.db-connector-mcp"
 API_LATEST="https://api.github.com/repos/${REPO}/releases/latest"
 

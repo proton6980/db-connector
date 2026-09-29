@@ -1,5 +1,5 @@
 const GITHUB_REPO = "proton6980/db-connector";
-const FALLBACK_TAG = "v0.3.0";
+const FALLBACK_TAG = "v0.4.0";
 const API_LATEST = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
 const PLATFORM_MAP = {
