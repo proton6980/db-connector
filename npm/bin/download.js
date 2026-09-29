@@ -1,14 +1,18 @@
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-const { getBinaryName, getDownloadUrl, getPlatformKey, PLATFORM_MAP } = require("./platform");
+const {
+  fetchLatestTag,
+  getBinaryName, getNativeUrl, getPlatformKey,
+  getLegacyUrl, getLegacyName, getLegacyPath,
+  getJarFallbackUrl, getJarFallbackName,
+  getBinaryPath, getJarPath,
+  PLATFORM_MAP, FALLBACK_TAG,
+} = require("./platform");
 
-const binaryName = getBinaryName();
-const downloadUrl = getDownloadUrl();
 const nativeDir = path.join(__dirname, "native");
-const binaryPath = path.join(nativeDir, binaryName || "");
 
-function download(url, dest) {
+function download(url, dest, displayName) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     let redirectCount = 0;
@@ -22,6 +26,12 @@ function download(url, dest) {
       const req = https.get(currentUrl, { headers: { "User-Agent": "node" } }, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           follow(res.headers.location);
+          return;
+        }
+        if (res.statusCode === 404) {
+          const err = new Error("NOT_FOUND");
+          err.code = 404;
+          reject(err);
           return;
         }
         if (res.statusCode !== 200) {
@@ -39,7 +49,7 @@ function download(url, dest) {
             const percent = Math.floor((downloaded / total) * 100);
             if (percent !== lastPercent && percent % 10 === 0) {
               lastPercent = percent;
-              process.stderr.write(`\rDownloading ${binaryName}: ${percent}%`);
+              process.stderr.write(`\rDownloading ${displayName}: ${percent}%`);
             }
           }
         });
@@ -68,15 +78,22 @@ function download(url, dest) {
 }
 
 async function main() {
-  if (!binaryName) {
-    const key = getPlatformKey();
+  const platformKey = getPlatformKey();
+
+  if (!getBinaryName()) {
     const supported = Object.keys(PLATFORM_MAP).join(", ");
-    console.error(`Unsupported platform: ${key}`);
+    console.error(`Unsupported platform: ${platformKey}`);
     console.error(`Supported platforms: ${supported}`);
     console.error("You can download binaries manually from:");
-    console.error("  https://github.com/proton6980/db-connector/releases/tag/v0.1.0");
+    console.error("  https://github.com/proton6980/db-connector/releases/latest");
     process.exit(1);
   }
+
+  const tag = await fetchLatestTag();
+  let binaryName = getBinaryName();
+  let downloadUrl = getNativeUrl(tag);
+  let binaryPath = getBinaryPath();
+  let isJar = false;
 
   if (fs.existsSync(binaryPath)) {
     return;
@@ -86,18 +103,73 @@ async function main() {
     fs.mkdirSync(nativeDir, { recursive: true });
   }
 
-  console.log(`Installing db-connector-mcp for ${getPlatformKey()}...`);
+  console.log(`Installing db-connector-mcp for ${platformKey} (${tag})...`);
 
   try {
-    await download(downloadUrl, binaryPath);
+    await download(downloadUrl, binaryPath, binaryName);
     fs.chmodSync(binaryPath, 0o755);
-    console.log(`Installed: ${binaryName}`);
+    console.log(`Installed: ${binaryName} (native)`);
   } catch (err) {
-    console.error(`Download failed: ${err.message}`);
-    console.error("Please download manually from:");
-    console.error(`  ${downloadUrl}`);
-    console.error(`And place it at: ${binaryPath}`);
-    process.exit(1);
+    if (err.code === 404) {
+      const legacyUrl = getLegacyUrl(tag);
+
+      if (legacyUrl) {
+        console.log(`Standard native not found, trying legacy alias...`);
+        try {
+          binaryName = getLegacyName();
+          downloadUrl = legacyUrl;
+          binaryPath = getLegacyPath();
+          await download(downloadUrl, binaryPath, binaryName);
+          fs.chmodSync(binaryPath, 0o755);
+          console.log(`Installed: ${binaryName} (native, legacy name)`);
+        } catch (err2) {
+          if (err2.code === 404) {
+            console.log(`Legacy alias not found either, falling back to JAR...`);
+            binaryName = getJarFallbackName(tag);
+            downloadUrl = getJarFallbackUrl(tag);
+            binaryPath = getJarPath(tag);
+            isJar = true;
+
+            try {
+              await download(downloadUrl, binaryPath, binaryName);
+              console.log(`Installed: ${binaryName} (JAR fallback)`);
+            } catch (err3) {
+              console.error(`Download failed: ${err3.message}`);
+              console.error("Please download manually from:");
+              console.error(`  ${downloadUrl}`);
+              console.error(`And place it at: ${binaryPath}`);
+              process.exit(1);
+            }
+          } else {
+            console.error(`Download failed: ${err2.message}`);
+            process.exit(1);
+          }
+        }
+      } else {
+        console.log(`Native binary not found, falling back to JAR...`);
+        binaryName = getJarFallbackName(tag);
+        downloadUrl = getJarFallbackUrl(tag);
+        binaryPath = getJarPath(tag);
+        isJar = true;
+
+        try {
+          await download(downloadUrl, binaryPath, binaryName);
+          console.log(`Installed: ${binaryName} (JAR fallback)`);
+        } catch (err2) {
+          console.error(`Download failed: ${err2.message}`);
+          console.error("Please download manually from:");
+          console.error(`  ${downloadUrl}`);
+          console.error(`And place it at: ${binaryPath}`);
+          process.exit(1);
+        }
+      }
+    } else {
+      console.error(`Download failed: ${err.message}`);
+      console.error("Please download manually from:");
+      console.error(`  ${downloadUrl}`);
+      console.error(`And place it at: ${binaryPath}`);
+      process.exit(1);
+    }
   }
 }
 

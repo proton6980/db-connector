@@ -4,16 +4,51 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const net = require("net");
-const { getBinaryPath } = require("./platform");
+const { getBinaryPath, getLegacyPath } = require("./platform");
+
+function findJar() {
+  const nativeDir = path.join(__dirname, "native");
+  if (!fs.existsSync(nativeDir)) return null;
+  const files = fs.readdirSync(nativeDir);
+  const jar = files.find((f) => f.startsWith("db-connector-") && f.endsWith(".jar"));
+  return jar ? path.join(nativeDir, jar) : null;
+}
 
 const preferredJavaPort = parseInt(process.env.DBCONNECTOR_PORT || "63306", 10);
 const preferredWebPort = parseInt(process.env.DBCONNECTOR_WEB_PORT || "68080", 10);
-const binaryPath = getBinaryPath();
+
+let binaryPath = getBinaryPath();
+let isJar = false;
 
 if (!fs.existsSync(binaryPath)) {
-  console.error("Native binary not found. Please run: npm install");
-  console.error(`Expected at: ${binaryPath}`);
-  process.exit(1);
+  const legacyPath = getLegacyPath();
+  if (legacyPath && fs.existsSync(legacyPath)) {
+    binaryPath = legacyPath;
+  } else {
+    const jarPath = findJar();
+    if (jarPath) {
+      binaryPath = jarPath;
+      isJar = true;
+    } else {
+      console.error("Binary not found. Please run: npm install");
+      console.error(`Expected at: ${getBinaryPath()}, or db-connector-*.jar`);
+      process.exit(1);
+    }
+  }
+}
+
+if (isJar) {
+  const javaHome = process.env.JAVA_HOME;
+  const javaCmd = javaHome ? path.join(javaHome, "bin", "java") : "java";
+  try {
+    const { execSync } = require("child_process");
+    execSync(`"${javaCmd}" -version`, { stdio: "pipe" });
+  } catch (e) {
+    console.error("Java is required to run db-connector (JAR fallback mode).");
+    console.error(`Native binary not available for this platform, and Java was not found.`);
+    console.error(`Please install JDK 17+ from https://adoptium.net/`);
+    process.exit(1);
+  }
 }
 
 function isPortAvailable(port) {
@@ -40,14 +75,27 @@ async function findAvailablePort(preferred, maxTries = 100) {
 let javaPort, webPort, java; // resolved at runtime
 
 function startJava(port) {
-  java = spawn(binaryPath, [], {
-    stdio: "pipe",
-    env: {
-      ...process.env,
-      DBCONNECTOR_PORT: String(port),
-      DBCONNECTOR_WEB_PORT: "", // will be set after web port is resolved; placeholder
-    },
-  });
+  if (isJar) {
+    const javaHome = process.env.JAVA_HOME;
+    const javaCmd = javaHome ? path.join(javaHome, "bin", "java") : "java";
+    java = spawn(javaCmd, ["-jar", binaryPath], {
+      stdio: "pipe",
+      env: {
+        ...process.env,
+        DBCONNECTOR_PORT: String(port),
+        DBCONNECTOR_WEB_PORT: "",
+      },
+    });
+  } else {
+    java = spawn(binaryPath, [], {
+      stdio: "pipe",
+      env: {
+        ...process.env,
+        DBCONNECTOR_PORT: String(port),
+        DBCONNECTOR_WEB_PORT: "",
+      },
+    });
+  }
 
   java.stdout.on("data", (data) => {
     process.stdout.write(`[java] ${data}`);

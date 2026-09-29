@@ -32,19 +32,28 @@ npx db-connector-mcp
 
 ### 方式三：手动下载
 
-从 [GitHub Releases](https://github.com/proton6980/db-connector/releases) 下载对应平台的二进制：
+从 [GitHub Releases](https://github.com/proton6980/db-connector/releases) 下载对应平台的 Native 二进制。如果 Native 暂不可用，可使用 JAR 兜底（需 JDK 17+）。
 
-| 平台 | 文件 |
-|------|------|
-| macOS Apple Silicon | `db-connector-darwin-arm64` |
-| macOS Intel | `db-connector-darwin-x64` |
-| Linux x64 | `db-connector-linux-x64` |
-| Windows x64 | `db-connector-windows-x64.exe` |
+| 平台 | Native 二进制 | JAR 兜底 |
+|------|-------------|---------|
+| macOS Apple Silicon | `db-connector-darwin-arm64` | `db-connector-0.3.0.jar` |
+| macOS Intel | `db-connector-darwin-x64` | `db-connector-0.3.0.jar` |
+| Linux x64 | `db-connector-linux-x64` | `db-connector-0.3.0.jar` |
+| Windows x64 | `db-connector-windows-x64.exe` | `db-connector-0.3.0.jar` |
 
+**Native 方式**（推荐）：
 ```bash
+# 以 macOS ARM64 为例，其他平台替换为对应文件名
 chmod +x db-connector-darwin-arm64
 ./db-connector-darwin-arm64
 ```
+
+**JAR 方式**（Native 不可用时的兜底，需 JDK 17+）：
+```bash
+java -jar db-connector-0.3.0.jar
+```
+
+> JDK 下载：<https://adoptium.net/>
 
 ### 方式四：从源码构建
 
