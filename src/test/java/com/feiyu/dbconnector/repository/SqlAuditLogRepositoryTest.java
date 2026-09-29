@@ -1,22 +1,22 @@
 package com.feiyu.dbconnector.repository;
 
 import com.feiyu.dbconnector.entity.SqlAuditLog;
+import io.micronaut.data.model.Page;
+import io.micronaut.data.model.Pageable;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
+@MicronautTest(environments = "test")
 class SqlAuditLogRepositoryTest {
 
-    @Autowired
+    @Inject
     private SqlAuditLogRepository repo;
 
     @BeforeEach
@@ -40,8 +40,8 @@ class SqlAuditLogRepositoryTest {
         createLog("conn1", "user1", "SUCCESS", 10);
         createLog("conn2", "user1", "SUCCESS", 20);
 
-        Page<SqlAuditLog> result = repo.search("conn1", null, null, null, null, PageRequest.of(0, 20));
-        assertEquals(1, result.getTotalElements());
+        Page<SqlAuditLog> result = repo.search("conn1", null, null, null, null, Pageable.from(0, 20));
+        assertEquals(1, result.getTotalSize());
     }
 
     @Test
@@ -49,8 +49,8 @@ class SqlAuditLogRepositoryTest {
         createLog("conn1", "user1", "SUCCESS", 10);
         createLog("conn1", "user1", "ERROR", 20);
 
-        Page<SqlAuditLog> result = repo.search(null, null, "ERROR", null, null, PageRequest.of(0, 20));
-        assertEquals(1, result.getTotalElements());
+        Page<SqlAuditLog> result = repo.search(null, null, "ERROR", null, null, Pageable.from(0, 20));
+        assertEquals(1, result.getTotalSize());
     }
 
     @Test
@@ -58,8 +58,8 @@ class SqlAuditLogRepositoryTest {
         createLog("conn1", "user1", "SUCCESS", 10);
         createLog("conn2", "user2", "ERROR", 20);
 
-        Page<SqlAuditLog> result = repo.search(null, null, null, null, null, PageRequest.of(0, 20));
-        assertEquals(2, result.getTotalElements());
+        Page<SqlAuditLog> result = repo.search(null, null, null, null, null, Pageable.from(0, 20));
+        assertEquals(2, result.getTotalSize());
     }
 
     @Test

@@ -1,76 +1,56 @@
 package com.feiyu.dbconnector.entity;
 
-import com.feiyu.dbconnector.security.EncryptedStringConverter;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import io.micronaut.data.annotation.AutoPopulated;
+import io.micronaut.data.annotation.Id;
+import io.micronaut.data.annotation.MappedEntity;
+import io.micronaut.data.annotation.MappedProperty;
+import jakarta.annotation.Nullable;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "db_connections")
+@MappedEntity("db_connections")
 public class DbConnection {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @MappedProperty
     private String name;
 
-    @Column(name = "db_type", nullable = false, length = 20)
+    @MappedProperty("db_type")
     private String dbType;
 
-    @Column(nullable = false)
     private String host;
 
-    @Column(nullable = false)
     private Integer port;
 
-    @Column(nullable = false, length = 100)
     private String username;
 
-    @Convert(converter = EncryptedStringConverter.class)
-    @Column(nullable = false, length = 500)
     private String password;
 
-    @Column(name = "database_name", length = 100)
+    @Nullable
+    @MappedProperty("database_name")
     private String databaseName;
 
-    @Column(name = "extra_params", columnDefinition = "TEXT")
+    @Nullable
+    @MappedProperty("extra_params")
     private String extraParams;
 
-    @Column(name = "pool_min")
+    @MappedProperty("pool_min")
     private Integer poolMin = 2;
 
-    @Column(name = "pool_max")
+    @MappedProperty("pool_max")
     private Integer poolMax = 10;
 
-    @Column(name = "is_active")
     private Boolean active = true;
 
-    @Column(name = "created_at")
+    @MappedProperty("created_at")
+    @AutoPopulated
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @MappedProperty("updated_at")
+    @AutoPopulated
     private LocalDateTime updatedAt;
-
-    @PrePersist
-    void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = createdAt;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

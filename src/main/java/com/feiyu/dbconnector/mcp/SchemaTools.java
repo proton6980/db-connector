@@ -6,13 +6,13 @@ import com.feiyu.dbconnector.common.ErrorCode;
 import com.feiyu.dbconnector.service.ConnectionService;
 import com.feiyu.dbconnector.service.MetadataService;
 import com.feiyu.dbconnector.service.QueryService;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.stereotype.Component;
+import io.micronaut.mcp.annotations.Tool;
+import jakarta.inject.Singleton;
 
 import java.sql.SQLException;
 import java.util.Map;
 
-@Component
+@Singleton
 public class SchemaTools {
 
     private final ConnectionService connections;
@@ -27,7 +27,6 @@ public class SchemaTools {
 
     @Tool(description = "列出指定连接的所有表（含 schema、表注释）。connection 为连接 ID 或名称。")
     @Audited
-    // 返回 Object：审计切面拦截异常后返回 LLM 友好文本
     public Object list_tables(String connection) {
         try {
             return metadataService.listTables(connections.readOnlyDataSource(connections.resolve(connection)));

@@ -5,33 +5,32 @@ import com.feiyu.dbconnector.common.ErrorCode;
 import com.feiyu.dbconnector.config.QueryProperties;
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.security.SafetyGuardService;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.QueryTimeoutException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Service;
+import jakarta.inject.Singleton;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/**
- * 只读查询执行链路：guard 预检 → 只读池 → maxRows/timeout 限制 → 结构化结果。
- * query_database 与 get_table_sample 共用。
- */
-@Service
+@Singleton
 public class QueryService {
 
     public record Column(String name, String type) {}
 
     public record QueryResult(List<Column> columns, List<Map<String, Object>> rows,
                               int rowCount, boolean truncated, long durationMs) {}
+
+    private static final Pattern NAMED_PARAM = Pattern.compile(":([a-zA-Z_][a-zA-Z0-9_]*)");
 
     private final ConnectionService connections;
     private final SafetyGuardService guard;
@@ -43,25 +42,31 @@ public class QueryService {
         this.props = props;
     }
 
-    /**
-     * @param maxRowsOverride 覆盖全局行上限（如 get_table_sample 传 5），null 用全局配置
-     */
     public QueryResult run(DbConnection c, String sql, Map<String, Object> params, Integer maxRowsOverride) {
         String safeSql = guard.check(sql);
         DataSource ds = connections.readOnlyDataSource(c);
-        int cap = (maxRowsOverride != null ? maxRowsOverride : props.maxRows()) + 1; // 多取 1 判截断
-        JdbcTemplate jt = new JdbcTemplate(ds);
-        jt.setMaxRows(cap);
-        jt.setQueryTimeout(props.timeoutSeconds());
+        int cap = (maxRowsOverride != null ? maxRowsOverride : props.maxRows()) + 1;
+
+        ParsedSql parsed = parseNamedParams(safeSql, params == null ? Map.of() : params);
 
         long start = System.currentTimeMillis();
         QueryResult result;
-        try {
-            result = new NamedParameterJdbcTemplate(jt).query(
-                    safeSql, params == null ? Map.of() : params,
-                    (org.springframework.jdbc.core.ResultSetExtractor<QueryResult>) rs -> extract(rs, cap));
-        } catch (DataAccessException e) {
-            throw translate(e);
+        try (Connection conn = ds.getConnection()) {
+            conn.setReadOnly(true);
+            try (PreparedStatement ps = conn.prepareStatement(parsed.sql())) {
+                for (int i = 0; i < parsed.bindValues().size(); i++) {
+                    ps.setObject(i + 1, parsed.bindValues().get(i));
+                }
+                ps.setMaxRows(cap);
+                ps.setQueryTimeout(props.timeoutSeconds());
+                try (ResultSet rs = ps.executeQuery()) {
+                    result = extract(rs, cap);
+                }
+            }
+        } catch (SQLTimeoutException e) {
+            throw new BizException(ErrorCode.QUERY_TIMEOUT, "查询超时（>" + props.timeoutSeconds() + "s）", e);
+        } catch (SQLException e) {
+            throw new BizException(ErrorCode.QUERY_FAILED, e.getMessage(), e);
         }
         return new QueryResult(result.columns(), result.rows(), result.rowCount(), result.truncated(),
                 System.currentTimeMillis() - start);
@@ -83,19 +88,30 @@ public class QueryService {
         }
         boolean truncated = rows.size() == cap;
         if (truncated) {
-            rows.remove(rows.size() - 1); // 丢掉探测用的第 maxRows+1 行
+            rows.remove(rows.size() - 1);
         }
         return new QueryResult(columns, rows, rows.size(), truncated, 0);
     }
 
-    private BizException translate(DataAccessException e) {
-        for (Throwable t = e; t != null; t = t.getCause()) {
-            if (t instanceof QueryTimeoutException || t instanceof SQLTimeoutException) {
-                return new BizException(ErrorCode.QUERY_TIMEOUT, "查询超时（>" + props.timeoutSeconds() + "s）", e);
+    private ParsedSql parseNamedParams(String sql, Map<String, Object> params) {
+        StringBuilder sb = new StringBuilder();
+        List<Object> bindValues = new ArrayList<>();
+        Matcher matcher = NAMED_PARAM.matcher(sql);
+        int lastEnd = 0;
+        while (matcher.find()) {
+            sb.append(sql, lastEnd, matcher.start());
+            String name = matcher.group(1);
+            if (params.containsKey(name)) {
+                sb.append("?");
+                bindValues.add(params.get(name));
+            } else {
+                sb.append(matcher.group());
             }
+            lastEnd = matcher.end();
         }
-        Throwable root = e;
-        while (root.getCause() != null) root = root.getCause();
-        return new BizException(ErrorCode.QUERY_FAILED, root.getMessage(), e);
+        sb.append(sql.substring(lastEnd));
+        return new ParsedSql(sb.toString(), bindValues);
     }
+
+    private record ParsedSql(String sql, List<Object> bindValues) {}
 }

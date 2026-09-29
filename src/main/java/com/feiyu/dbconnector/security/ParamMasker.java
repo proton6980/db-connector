@@ -1,12 +1,11 @@
 package com.feiyu.dbconnector.security;
 
-import org.springframework.stereotype.Component;
+import jakarta.inject.Singleton;
 
 import java.util.HashMap;
 import java.util.Map;
 
-/** 审计参数脱敏：key 命中敏感词的值替换为 ****。 */
-@Component
+@Singleton
 public class ParamMasker {
 
     private static final String SENSITIVE_KEY = "(?i).*(password|passwd|secret|token|id_card|phone).*";

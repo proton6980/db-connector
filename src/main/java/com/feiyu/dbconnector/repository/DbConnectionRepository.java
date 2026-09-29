@@ -1,22 +1,32 @@
 package com.feiyu.dbconnector.repository;
 
 import com.feiyu.dbconnector.entity.DbConnection;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import io.micronaut.data.annotation.Query;
+import io.micronaut.data.jdbc.annotation.JdbcRepository;
+import io.micronaut.data.model.query.builder.sql.Dialect;
+import io.micronaut.data.repository.CrudRepository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface DbConnectionRepository extends JpaRepository<DbConnection, String> {
+@JdbcRepository(dialect = Dialect.H2)
+public interface DbConnectionRepository extends CrudRepository<DbConnection, String> {
 
     Optional<DbConnection> findByName(String name);
 
-    List<DbConnection> findByActiveTrue();
+    @Query(value = "SELECT * FROM db_connections WHERE name = :name", nativeQuery = true)
+    Optional<DbConnection> queryByName(String name);
 
-    boolean existsByName(String name);
-
-    /** 绕过 converter 直接取落库密文（仅测试用）。 */
     @Query(value = "SELECT password FROM db_connections WHERE name = :name", nativeQuery = true)
-    String findRawPasswordByName(@Param("name") String name);
+    Optional<String> findRawPasswordByName(String name);
+
+    @Query(value = "SELECT COUNT(*) FROM db_connections WHERE name = :name", nativeQuery = true)
+    long countByName(String name);
+
+    default boolean existsByName(String name) {
+        return countByName(name) > 0;
+    }
+
+    @Query(value = "SELECT * FROM db_connections WHERE active = true", nativeQuery = true)
+    List<DbConnection> findByActiveTrue();
 }

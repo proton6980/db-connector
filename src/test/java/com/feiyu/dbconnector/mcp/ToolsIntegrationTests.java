@@ -6,37 +6,37 @@ import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.entity.SqlAuditLog;
 import com.feiyu.dbconnector.repository.DbConnectionRepository;
 import com.feiyu.dbconnector.repository.SqlAuditLogRepository;
+import com.feiyu.dbconnector.security.AesCredentialCipher;
 import com.feiyu.dbconnector.service.MetadataService;
 import com.feiyu.dbconnector.service.QueryService;
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.sql.DriverManager;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * H2 全链路集成测试：tool → 守卫 → 只读池 → 结果结构 → 审计落库。
- * 目标库用 jdbc:h2:mem:itdb（普通连接造数，只读池查询，顺带验证 readOnly 防御）。
- */
-@SpringBootTest
+@MicronautTest(environments = "test")
 class ToolsIntegrationTests {
 
     private static final String ITDB = "jdbc:h2:mem:itdb;DB_CLOSE_DELAY=-1";
 
-    @Autowired private QueryTools queryTools;
-    @Autowired private SchemaTools schemaTools;
-    @Autowired private ConnectionTools connectionTools;
-    @Autowired private DbConnectionRepository connectionRepository;
-    @Autowired private SqlAuditLogRepository auditLogRepository;
-    @Autowired private AuditEventQueue auditQueue;
-    @Autowired private AuditLogFlusher auditFlusher;
+    @Inject private QueryTools queryTools;
+    @Inject private SchemaTools schemaTools;
+    @Inject private ConnectionTools connectionTools;
+    @Inject private DbConnectionRepository connectionRepository;
+    @Inject private SqlAuditLogRepository auditLogRepository;
+    @Inject private AuditEventQueue auditQueue;
+    @Inject private AuditLogFlusher auditFlusher;
+    @Inject private AesCredentialCipher cipher;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -47,13 +47,16 @@ class ToolsIntegrationTests {
             st.execute("INSERT INTO TEST VALUES (1, 'alice'), (2, 'bob'), (3, 'carol')");
         }
         DbConnection c = new DbConnection();
+        c.setId(UUID.randomUUID().toString());
         c.setName("h2-it");
         c.setDbType("H2");
         c.setHost("mem");
         c.setPort(-1);
         c.setUsername("sa");
-        c.setPassword("");
+        c.setPassword(cipher.encrypt(""));
         c.setDatabaseName("itdb");
+        c.setCreatedAt(LocalDateTime.now());
+        c.setUpdatedAt(LocalDateTime.now());
         connectionRepository.findByName("h2-it").ifPresent(connectionRepository::delete);
         connectionRepository.save(c);
         auditLogRepository.deleteAll();
@@ -127,10 +130,8 @@ class ToolsIntegrationTests {
     @Test
     void listConnectionsAndEncryptedAtRest() {
         assertTrue(connectionTools.list_connections().stream().anyMatch(c -> "h2-it".equals(c.name())));
-        // 落库为密文（converter 加密），实体读出为明文（converter 解密）
         DbConnection stored = connectionRepository.findByName("h2-it").orElseThrow();
-        assertEquals("", stored.getPassword());
-        assertTrue(connectionRepository.findRawPasswordByName("h2-it").startsWith("v1:"));
+        assertTrue(stored.getPassword().startsWith("v1:"));
     }
 
     @Test
@@ -159,7 +160,7 @@ class ToolsIntegrationTests {
 
     @Test
     void queueOverflowDropsAndCounts() {
-        auditFlusher.flush(); // 清空遗留事件，保证本测试计数确定
+        auditFlusher.flush();
         long before = auditQueue.droppedCount();
         for (int i = 0; i < 1001; i++) {
             auditQueue.offer(new com.feiyu.dbconnector.audit.AuditEvent(

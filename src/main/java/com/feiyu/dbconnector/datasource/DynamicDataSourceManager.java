@@ -3,15 +3,12 @@ package com.feiyu.dbconnector.datasource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.annotation.PreDestroy;
-import org.springframework.stereotype.Component;
+import jakarta.inject.Singleton;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 按业务 key 动态创建/复用/销毁 Hikari 连接池，与 Spring 容器主数据源（H2 元数据库）互不影响。
- */
-@Component
+@Singleton
 public class DynamicDataSourceManager {
 
     private final Map<String, HikariDataSource> pools = new ConcurrentHashMap<>();

@@ -1,14 +1,14 @@
 package com.feiyu.dbconnector.mcp;
 
 import com.feiyu.dbconnector.audit.Audited;
+import com.feiyu.dbconnector.config.ConnectionForm;
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.service.ConnectionService;
-import com.feiyu.dbconnector.web.connection.ConnectionForm;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Component;
+import io.micronaut.mcp.annotations.Tool;
+import io.micronaut.mcp.annotations.ToolArg;
+import jakarta.inject.Singleton;
 
-@Component
+@Singleton
 public class ConnectionManageTools {
 
     private final ConnectionService connectionService;
@@ -25,17 +25,17 @@ public class ConnectionManageTools {
             "创建后会自动加密存储密码，可通过 list_connections 查看并使用新连接。")
     @Audited
     public ConnectionDetail create_connection(
-            @ToolParam(description = "连接唯一标识（英文数字下划线），如 'prod-dm'") String id,
-            @ToolParam(description = "连接显示名称，如 '生产环境DM'") String name,
-            @ToolParam(description = "数据库类型：DM 或 H2") String dbType,
-            @ToolParam(description = "主机地址，如 192.168.1.100") String host,
-            @ToolParam(description = "端口号，DM 默认 5236，H2 默认 9092") int port,
-            @ToolParam(description = "数据库用户名") String username,
-            @ToolParam(description = "数据库密码（敏感信息，会被加密存储）") String password,
-            @ToolParam(description = "数据库名/实例名，可选，传 null 跳过") String databaseName,
-            @ToolParam(description = "额外 JDBC 参数 JSON，如 {\"ssl\":true}，可选，传 null 跳过") String extraParams,
-            @ToolParam(description = "连接池最小连接数，默认 2") int poolMin,
-            @ToolParam(description = "连接池最大连接数，默认 10") int poolMax) {
+            @ToolArg(description = "连接唯一标识（英文数字下划线），如 'prod-dm'") String id,
+            @ToolArg(description = "连接显示名称，如 '生产环境DM'") String name,
+            @ToolArg(description = "数据库类型：DM 或 H2") String dbType,
+            @ToolArg(description = "主机地址，如 192.168.1.100") String host,
+            @ToolArg(description = "端口号，DM 默认 5236，H2 默认 9092") int port,
+            @ToolArg(description = "数据库用户名") String username,
+            @ToolArg(description = "数据库密码（敏感信息，会被加密存储）") String password,
+            @ToolArg(description = "数据库名/实例名，可选，传 null 跳过") String databaseName,
+            @ToolArg(description = "额外 JDBC 参数 JSON，如 {\"ssl\":true}，可选，传 null 跳过") String extraParams,
+            @ToolArg(description = "连接池最小连接数，默认 2") int poolMin,
+            @ToolArg(description = "连接池最大连接数，默认 10") int poolMax) {
         ConnectionForm form = new ConnectionForm();
         form.setName(name);
         form.setDbType(dbType);
@@ -56,17 +56,17 @@ public class ConnectionManageTools {
             "密码字段留空则不修改原密码。")
     @Audited
     public ConnectionDetail update_connection(
-            @ToolParam(description = "要修改的连接 ID 或名称") String connection,
-            @ToolParam(description = "新名称，可选，传 null 不修改") String name,
-            @ToolParam(description = "新主机地址，可选，传 null 不修改") String host,
-            @ToolParam(description = "新端口号，可选，传 -1 不修改") int port,
-            @ToolParam(description = "新用户名，可选，传 null 不修改") String username,
-            @ToolParam(description = "新密码，留空不修改，可选") String password,
-            @ToolParam(description = "新数据库名，可选，传 null 不修改") String databaseName,
-            @ToolParam(description = "额外参数 JSON，可选，传 null 不修改") String extraParams,
-            @ToolParam(description = "最小连接数，可选，传 -1 不修改") int poolMin,
-            @ToolParam(description = "最大连接数，可选，传 -1 不修改") int poolMax,
-            @ToolParam(description = "是否启用，可选，传 null 不修改") Boolean active) {
+            @ToolArg(description = "要修改的连接 ID 或名称") String connection,
+            @ToolArg(description = "新名称，可选，传 null 不修改") String name,
+            @ToolArg(description = "新主机地址，可选，传 null 不修改") String host,
+            @ToolArg(description = "新端口号，可选，传 -1 不修改") int port,
+            @ToolArg(description = "新用户名，可选，传 null 不修改") String username,
+            @ToolArg(description = "新密码，留空不修改，可选") String password,
+            @ToolArg(description = "新数据库名，可选，传 null 不修改") String databaseName,
+            @ToolArg(description = "额外参数 JSON，可选，传 null 不修改") String extraParams,
+            @ToolArg(description = "最小连接数，可选，传 -1 不修改") int poolMin,
+            @ToolArg(description = "最大连接数，可选，传 -1 不修改") int poolMax,
+            @ToolArg(description = "是否启用，可选，传 null 不修改") Boolean active) {
         DbConnection existing = connectionService.resolve(connection);
         ConnectionForm form = new ConnectionForm();
         form.setName(name != null ? name : existing.getName());
@@ -87,7 +87,7 @@ public class ConnectionManageTools {
     @Tool(description = "删除数据库连接并关闭其连接池。删除后该连接无法恢复，需重新创建。")
     @Audited
     public String delete_connection(
-            @ToolParam(description = "要删除的连接 ID 或名称") String connection) {
+            @ToolArg(description = "要删除的连接 ID 或名称") String connection) {
         DbConnection c = connectionService.resolve(connection);
         connectionService.delete(c.getId());
         return "连接已删除: " + c.getName() + " (" + c.getId() + ")";
@@ -96,7 +96,7 @@ public class ConnectionManageTools {
     @Tool(description = "测试数据库连接是否可达。会用 JDBC 直连尝试执行 SELECT 1，返回成功/失败及耗时。" +
             "用于在创建连接后验证配置是否正确。")
     public String test_connection(
-            @ToolParam(description = "要测试的连接 ID 或名称") String connection) {
+            @ToolArg(description = "要测试的连接 ID 或名称") String connection) {
         DbConnection c = connectionService.resolve(connection);
         ConnectionService.TestResult result = connectionService.test(c.getId());
         if (result.ok()) {

@@ -5,55 +5,51 @@ import com.feiyu.dbconnector.common.BizException;
 import com.feiyu.dbconnector.common.ErrorCode;
 import com.feiyu.dbconnector.security.ParamMasker;
 import com.feiyu.dbconnector.service.QueryService;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.stereotype.Component;
+import io.micronaut.aop.InterceptorBinding;
+import io.micronaut.aop.MethodInterceptor;
+import io.micronaut.aop.MethodInvocationContext;
+import jakarta.inject.Singleton;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * 审计切面：@Audited tool 方法的唯一审计入口。
- * 成功记 SUCCESS；SQL_REJECTED 记 BLOCKED；其余异常记 ERROR。
- * BizException 不上抛，直接返回 LLM 友好文本（`[CODE] message`），避免客户端看到原始堆栈。
- */
-@Aspect
-@Component
-public class AuditLogAspect {
+@Singleton
+@InterceptorBinding(value = Audited.class)
+public class AuditLogInterceptor implements MethodInterceptor<Object, Object> {
 
     private final AuditEventQueue queue;
     private final ParamMasker masker;
     private final ObjectMapper objectMapper;
 
-    public AuditLogAspect(AuditEventQueue queue, ParamMasker masker, ObjectMapper objectMapper) {
+    public AuditLogInterceptor(AuditEventQueue queue, ParamMasker masker, ObjectMapper objectMapper) {
         this.queue = queue;
         this.masker = masker;
         this.objectMapper = objectMapper;
     }
 
-    @Around("@annotation(Audited)")
-    public Object around(ProceedingJoinPoint pjp) throws Throwable {
-        String[] names = ((MethodSignature) pjp.getSignature()).getParameterNames();
-        Object[] args = pjp.getArgs();
+    @Override
+    public Object intercept(MethodInvocationContext<Object, Object> context) {
+        Object[] args = context.getParameterValues();
+        String methodName = context.getMethodName();
 
         String connectionId = null;
         String sql = null;
         String paramsJson = null;
         long start = System.currentTimeMillis();
-        for (int i = 0; i < names.length; i++) {
-            if (i >= args.length) break;
-            switch (names[i]) {
-                case "connection", "connectionId" -> connectionId = String.valueOf(args[i]);
-                case "sql" -> sql = (String) args[i];
-                case "params" -> paramsJson = toJson(masker.mask((Map<String, Object>) args[i]));
-                default -> { }
+
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof String s) {
+                if (i == 0 && connectionId == null) connectionId = s;
+                else if (sql == null && s.length() > 10) sql = s;
+            } else if (args[i] instanceof Map<?, ?> m) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> typed = (Map<String, Object>) m;
+                paramsJson = toJson(masker.mask(typed));
             }
         }
 
         try {
-            Object result = pjp.proceed();
+            Object result = context.proceed();
             queue.offer(new AuditEvent(connectionId, accountId(), sql, paramsJson, "SUCCESS",
                     rowCount(result), System.currentTimeMillis() - start, null));
             return result;

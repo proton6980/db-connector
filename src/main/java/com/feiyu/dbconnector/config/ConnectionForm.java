@@ -1,40 +1,17 @@
-package com.feiyu.dbconnector.web.connection;
-
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+package com.feiyu.dbconnector.config;
 
 public class ConnectionForm {
 
-    @NotBlank(message = "名称不能为空")
     private String name;
-
-    @NotBlank(message = "数据库类型不能为空")
     private String dbType;
-
-    @NotBlank(message = "主机不能为空")
     private String host;
-
-    @NotNull(message = "端口不能为空")
-    @Min(value = 1, message = "端口最小为1")
-    @Max(value = 65535, message = "端口最大为65535")
     private Integer port;
-
-    @NotBlank(message = "用户名不能为空")
     private String username;
-
     private String password;
-
     private String databaseName;
     private String extraParams;
-
-    @Min(value = 0, message = "最小池大小不能为负")
     private Integer poolMin = 2;
-
-    @Min(value = 1, message = "最大池大小至少为1")
     private Integer poolMax = 10;
-
     private Boolean active = true;
 
     public String getName() { return name; }

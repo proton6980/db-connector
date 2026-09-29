@@ -1,7 +1,10 @@
 package com.feiyu.dbconnector.security;
 
+import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.env.Environment;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.env.MockEnvironment;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -11,11 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AesCredentialCipherTest {
 
     private AesCredentialCipher cipher(String key) {
-        MockEnvironment env = new MockEnvironment();
-        if (key != null) {
-            env.setProperty("dbconnector.crypto.key", key);
-        }
-        return new AesCredentialCipher(env);
+        Environment env = ApplicationContext.builder().build().getEnvironment();
+        return new AesCredentialCipher(env, key != null ? key : "");
     }
 
     @Test
@@ -48,8 +48,7 @@ class AesCredentialCipherTest {
 
     @Test
     void missingKeyFailsInProdProfile() {
-        MockEnvironment env = new MockEnvironment();
-        env.setActiveProfiles("prod");
-        assertThrows(IllegalStateException.class, () -> new AesCredentialCipher(env));
+        Environment env = ApplicationContext.builder().environments("prod").build().getEnvironment();
+        assertThrows(IllegalStateException.class, () -> new AesCredentialCipher(env, ""));
     }
 }

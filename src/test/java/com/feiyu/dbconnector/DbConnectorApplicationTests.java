@@ -1,9 +1,9 @@
 package com.feiyu.dbconnector;
 
+import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@MicronautTest
 class DbConnectorApplicationTests {
 
     @Test

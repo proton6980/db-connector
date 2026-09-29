@@ -1,57 +1,49 @@
 package com.feiyu.dbconnector.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import io.micronaut.data.annotation.AutoPopulated;
+import io.micronaut.data.annotation.Id;
+import io.micronaut.data.annotation.MappedEntity;
+import io.micronaut.data.annotation.MappedProperty;
+import jakarta.annotation.Nullable;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "sql_audit_log")
+@MappedEntity("sql_audit_log")
 public class SqlAuditLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @AutoPopulated
     private Long id;
 
-    @Column(name = "connection_id", nullable = false, length = 36)
+    @MappedProperty("connection_id")
     private String connectionId;
 
-    @Column(name = "account_id", nullable = false, length = 100)
+    @MappedProperty("account_id")
     private String accountId;
 
-    @Column(name = "sql_text", nullable = false, columnDefinition = "TEXT")
+    @MappedProperty("sql_text")
     private String sqlText;
 
-    @Column(columnDefinition = "TEXT")
+    @Nullable
     private String params;
 
-    @Column(nullable = false, length = 20)
     private String status;
 
-    @Column(name = "row_count")
+    @Nullable
+    @MappedProperty("row_count")
     private Integer rowCount;
 
-    @Column(name = "duration_ms")
+    @Nullable
+    @MappedProperty("duration_ms")
     private Long durationMs;
 
-    @Column(name = "error_msg", columnDefinition = "TEXT")
+    @Nullable
+    @MappedProperty("error_msg")
     private String errorMsg;
 
-    @Column(name = "client_ip", length = 45)
-    private String clientIp;
-
-    @Column(name = "executed_at")
+    @MappedProperty("executed_at")
+    @AutoPopulated
     private LocalDateTime executedAt;
-
-    @PrePersist
-    void onCreate() {
-        executedAt = LocalDateTime.now();
-    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -71,8 +63,6 @@ public class SqlAuditLog {
     public void setDurationMs(Long durationMs) { this.durationMs = durationMs; }
     public String getErrorMsg() { return errorMsg; }
     public void setErrorMsg(String errorMsg) { this.errorMsg = errorMsg; }
-    public String getClientIp() { return clientIp; }
-    public void setClientIp(String clientIp) { this.clientIp = clientIp; }
     public LocalDateTime getExecutedAt() { return executedAt; }
     public void setExecutedAt(LocalDateTime executedAt) { this.executedAt = executedAt; }
 }

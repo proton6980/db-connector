@@ -1,6 +1,6 @@
 package com.feiyu.dbconnector.service;
 
-import org.springframework.stereotype.Service;
+import jakarta.inject.Singleton;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -13,12 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** 元数据读取：JDBC DatabaseMetaData（表清单/字段/主键/索引/注释）。 */
-
-@Service
+@Singleton
 public class MetadataService {
 
-    /** DM 系统内置 schema（SYSDBA 是默认用户 schema，不能滤）。 */
     private static final Set<String> DM_SYSTEM_SCHEMAS = Set.of("SYS", "SYSSSO", "SYSAUDITOR", "CTI_SYSDBA");
 
     public record TableInfo(String schema, String name, String remarks) {}

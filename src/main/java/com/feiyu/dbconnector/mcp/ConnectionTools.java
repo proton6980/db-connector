@@ -2,12 +2,12 @@ package com.feiyu.dbconnector.mcp;
 
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.repository.DbConnectionRepository;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.stereotype.Component;
+import io.micronaut.mcp.annotations.Tool;
+import jakarta.inject.Singleton;
 
 import java.util.List;
 
-@Component
+@Singleton
 public class ConnectionTools {
 
     private final DbConnectionRepository repository;

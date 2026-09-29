@@ -19,7 +19,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-VERSION="${DB_CONNECTOR_VERSION:-0.0.1-SNAPSHOT}"
+VERSION="${DB_CONNECTOR_VERSION:-0.1.0}"
 JAR_FILE="$PROJECT_DIR/target/db-connector-${VERSION}.jar"
 
 if [ ! -f "$JAR_FILE" ]; then
@@ -34,4 +34,11 @@ fi
 
 mkdir -p "$PROJECT_DIR/data"
 
-exec java -jar "$JAR_FILE" --spring.profiles.active=stdio 2>"$PROJECT_DIR/data/dbconnector.log"
+GRAALVM_HOME="${GRAALVM_HOME:-/Users/feiyu/Library/Java/JavaVirtualMachines/graalvm-jdk-25/Contents/Home}"
+JAVA_BIN="${GRAALVM_HOME}/bin/java"
+
+if [ -f "$PROJECT_DIR/target/db-connector" ]; then
+    exec "$PROJECT_DIR/target/db-connector" 2>"$PROJECT_DIR/data/dbconnector.log"
+fi
+
+exec "$JAVA_BIN" -jar "$JAR_FILE" 2>"$PROJECT_DIR/data/dbconnector.log"

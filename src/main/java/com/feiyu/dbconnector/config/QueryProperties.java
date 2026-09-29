@@ -1,8 +1,7 @@
 package com.feiyu.dbconnector.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import io.micronaut.context.annotation.ConfigurationProperties;
 
-/** 查询限制（全局，P1 无账号维度；RBAC 是 Phase 4 的事）。 */
 @ConfigurationProperties("dbconnector.query")
 public record QueryProperties(int maxRows, int timeoutSeconds) {
 
