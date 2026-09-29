@@ -1,7 +1,6 @@
 package com.feiyu.dbconnector.security;
 
 import io.micronaut.context.annotation.Property;
-import io.micronaut.context.env.Environment;
 import jakarta.inject.Singleton;
 
 import javax.crypto.Cipher;
@@ -15,7 +14,6 @@ import java.util.Base64;
 @Singleton
 public class AesCredentialCipher {
 
-    private static final String DEV_KEY = "dev-key-change-me";
     private static final byte VERSION = 1;
     private static final String PREFIX = "v" + VERSION + ":";
     private static final int GCM_IV_BYTES = 12;
@@ -24,21 +22,13 @@ public class AesCredentialCipher {
     private final SecretKeySpec key;
     private final SecureRandom random = new SecureRandom();
 
-    public AesCredentialCipher(Environment env,
+    public AesCredentialCipher(CryptoKeyProvider keyProvider,
                                @Property(name = "dbconnector.crypto.key", defaultValue = "")
                                String configuredKey) {
-        if (configuredKey.isBlank()) {
-            for (String profile : env.getActiveNames()) {
-                if ("prod".equals(profile)) {
-                    throw new IllegalStateException(
-                            "prod profile 必须配置 dbconnector.crypto.key（或环境变量 DBCONNECTOR_CRYPTO_KEY）");
-                }
-            }
-            configuredKey = DEV_KEY;
-        }
+        String effectiveKey = keyProvider.resolveKey(configuredKey);
         try {
             this.key = new SecretKeySpec(
-                    MessageDigest.getInstance("SHA-256").digest(configuredKey.getBytes(StandardCharsets.UTF_8)), "AES");
+                    MessageDigest.getInstance("SHA-256").digest(effectiveKey.getBytes(StandardCharsets.UTF_8)), "AES");
         } catch (Exception e) {
             throw new IllegalStateException("密钥派生失败", e);
         }

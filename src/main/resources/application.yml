@@ -21,8 +21,6 @@ dbconnector:
   query:
     max-rows: 100
     timeout-seconds: 10
-  crypto:
-    key: ${DBCONNECTOR_CRYPTO_KEY:}
 
 hikaricp:
   maximum-pool-size: 10
