@@ -1,16 +1,15 @@
 #!/bin/bash
 #===============================================================================
-# db-connector — MCP STDIO Launcher
+# db-connector — MCP SSE Server
 #
-# MCP 客户端（Cursor / Claude Code / VS Code）通过 stdin/stdout 与此进程通信。
+# 启动后监听 http://127.0.0.1:8080，MCP 客户端连接 /mcp endpoint。
+# 内置 Web 管理控制台可通过 http://127.0.0.1:8081 访问。
 #
 # 用法示例（Cursor .cursor/mcp.json）:
 #   {
 #     "mcpServers": {
 #       "db-connector": {
-#         "command": "sh",
-#         "args": ["/path/to/db-connector/bin/db-connector"],
-#         "env": { "DBCONNECTOR_CRYPTO_KEY": "your-key" }
+#         "url": "http://127.0.0.1:8080/mcp"
 #       }
 #     }
 #   }
@@ -19,7 +18,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-VERSION="${DB_CONNECTOR_VERSION:-0.1.0}"
+VERSION="${DB_CONNECTOR_VERSION:-0.2.2}"
 JAR_FILE="$PROJECT_DIR/target/db-connector-${VERSION}.jar"
 
 if [ ! -f "$JAR_FILE" ]; then

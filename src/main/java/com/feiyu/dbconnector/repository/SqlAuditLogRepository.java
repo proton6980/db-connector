@@ -47,4 +47,8 @@ public interface SqlAuditLogRepository extends CrudRepository<SqlAuditLog, Long>
     @Query(value = "SELECT COUNT(*) FROM sql_audit_log WHERE executed_at >= :since",
             nativeQuery = true)
     long countSince(LocalDateTime since);
+
+    @Query(value = "SELECT * FROM sql_audit_log WHERE executed_at >= :since ORDER BY executed_at DESC",
+            nativeQuery = true)
+    List<SqlAuditLog> findSince(LocalDateTime since);
 }

@@ -17,14 +17,11 @@ public class ConnectionManageTools {
         this.connectionService = connectionService;
     }
 
-    public record ConnectionDetail(String id, String name, String dbType, String host, Integer port,
-                                   String databaseName, String username, Boolean active) {}
-
     @Tool(description = "创建新的数据库连接。需要提供连接 ID、名称、数据库类型、主机、端口、用户名、密码等信息。" +
             "数据库类型支持 DM（达梦）和 H2（开发测试用）。" +
             "创建后会自动加密存储密码，可通过 list_connections 查看并使用新连接。")
     @Audited
-    public ConnectionDetail create_connection(
+    public String create_connection(
             @ToolArg(description = "连接唯一标识（英文数字下划线），如 'prod-dm'") String id,
             @ToolArg(description = "连接显示名称，如 '生产环境DM'") String name,
             @ToolArg(description = "数据库类型：DM 或 H2") String dbType,
@@ -49,13 +46,13 @@ public class ConnectionManageTools {
         form.setPoolMax(poolMax);
         form.setActive(true);
         DbConnection c = connectionService.create(id, form);
-        return toDetail(c);
+        return formatConnection(c);
     }
 
     @Tool(description = "修改已有数据库连接配置。仅需提供要修改的字段，未提供的字段保持不变。" +
             "密码字段留空则不修改原密码。")
     @Audited
-    public ConnectionDetail update_connection(
+    public String update_connection(
             @ToolArg(description = "要修改的连接 ID 或名称") String connection,
             @ToolArg(description = "新名称，可选，传 null 不修改") String name,
             @ToolArg(description = "新主机地址，可选，传 null 不修改") String host,
@@ -81,7 +78,7 @@ public class ConnectionManageTools {
         form.setPoolMax(poolMax >= 0 ? poolMax : existing.getPoolMax());
         form.setActive(active != null ? active : existing.getActive());
         DbConnection c = connectionService.update(existing.getId(), form);
-        return toDetail(c);
+        return formatConnection(c);
     }
 
     @Tool(description = "删除数据库连接并关闭其连接池。删除后该连接无法恢复，需重新创建。")
@@ -105,8 +102,10 @@ public class ConnectionManageTools {
         return "连接失败: " + c.getName() + " - " + result.message() + " (耗时 " + result.durationMs() + "ms)";
     }
 
-    private ConnectionDetail toDetail(DbConnection c) {
-        return new ConnectionDetail(c.getId(), c.getName(), c.getDbType(), c.getHost(),
-                c.getPort(), c.getDatabaseName(), c.getUsername(), c.getActive());
+    private String formatConnection(DbConnection c) {
+        return "ID: " + c.getId() + "\n名称: " + c.getName() + "\n类型: " + c.getDbType() +
+                "\n地址: " + c.getHost() + ":" + c.getPort() +
+                (c.getDatabaseName() != null ? "/" + c.getDatabaseName() : "") +
+                "\n用户: " + c.getUsername() + "\n状态: " + (c.getActive() ? "启用" : "禁用");
     }
 }

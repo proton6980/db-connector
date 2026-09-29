@@ -1,5 +1,6 @@
 package com.feiyu.dbconnector.service;
 
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Singleton;
 
 import javax.sql.DataSource;
@@ -18,13 +19,17 @@ public class MetadataService {
 
     private static final Set<String> DM_SYSTEM_SCHEMAS = Set.of("SYS", "SYSSSO", "SYSAUDITOR", "CTI_SYSDBA");
 
+    @Serdeable
     public record TableInfo(String schema, String name, String remarks) {}
 
+    @Serdeable
     public record ColumnInfo(String name, String type, boolean nullable, String defaultValue,
                              String remarks, boolean primaryKey) {}
 
+    @Serdeable
     public record IndexInfo(String name, boolean unique, List<String> columns) {}
 
+    @Serdeable
     public record DescribeResult(List<ColumnInfo> columns, List<IndexInfo> indexes) {}
 
     public List<TableInfo> listTables(DataSource ds) throws SQLException {

@@ -24,7 +24,7 @@
         <micronaut.version>5.2.0</micronaut.version>
         <micronaut.aot.enabled>false</micronaut.aot.enabled>
         <micronaut.aot.packageName>com.feiyu.dbconnector.aot.generated</micronaut.aot.packageName>
-        <micronaut.runtime>none</micronaut.runtime>
+        <micronaut.runtime>netty</micronaut.runtime>
         <exec.mainClass>com.feiyu.dbconnector.DbConnectorApplication</exec.mainClass>
         <micronaut.mcp.version>2.1.0</micronaut.mcp.version>
     </properties>
@@ -56,6 +56,11 @@
         <dependency>
             <groupId>io.micronaut.mcp</groupId>
             <artifactId>micronaut-mcp-server-java-sdk</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micronaut</groupId>
+            <artifactId>micronaut-http-server-netty</artifactId>
         </dependency>
 
         <dependency>

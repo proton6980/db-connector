@@ -1,10 +1,10 @@
 # db-connector
 
-本地数据库 MCP sidecar：把已配置的数据库（P1：达梦 DM8）以 MCP tool 暴露给 Cursor / Claude Code / Grok CLI 等 AI 客户端，只读查询 + 元数据 + 全量审计。
+本地数据库 MCP sidecar：把已配置的数据库（P1：达梦 DM8）以 MCP tool 暴露给 Cursor / Claude Code / Grok CLI 等 AI 客户端，只读查询 + 元数据 + 全量审计。内置 Web 管理控制台，一次启动同时获得 MCP SSE 服务 + 可视化管理界面。
 
 ## 安全边界
 
-- **STDIO 模式**：MCP 通信走 stdin/stdout，由 IDE 自动管理进程生命周期，无网络暴露
+- **HTTP/SSE 模式**：MCP 通信走 Streamable HTTP（含 SSE），Java 监听 `127.0.0.1:8080`，仅本地访问
 - **只读多层防御**：
   1. JSqlParser 预检：仅放行单条 `SELECT` / `WITH(CTE)`，拒绝 DDL/DML/多语句/`SELECT INTO`
   2. JDBC 层：连接池 `readOnly(true)` + `setMaxRows(100)` + `setQueryTimeout(10s)`
@@ -60,13 +60,27 @@ cd db-connector
 
 ## 启动
 
-STDIO 模式是唯一传输方式，MCP 客户端通过 stdin/stdout 通信：
-
 ```bash
-db-connector-mcp
+npx db-connector-mcp
 ```
 
-无需指定端口，无需手动启动。IDE 会以子进程方式拉起，通过标准输入输出交互。
+启动后同时提供两个服务：
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| MCP SSE Endpoint | `http://127.0.0.1:8080/mcp` | MCP 客户端连接此地址 |
+| Web 管理控制台 | `http://127.0.0.1:8081` | 浏览器打开此地址管理连接、查询、审计 |
+
+端口可通过环境变量配置：
+DBCONNECTOR_PORT（Java 端口，默认 8080）和 DBCONNECTOR_WEB_PORT（前端端口，默认 8081）。
+
+## Web 管理控制台
+
+浏览器打开 `http://127.0.0.1:8081` 即可使用内置管理控制台：
+
+- **仪表盘**：近 24h 查询统计、错误率、Top SQL、连接池状态
+- **连接管理**：CRUD 数据库连接、测试连通性、重载连接池
+- **审计日志**：分页查询、多条件筛选、CSV 导出
 
 ## MCP Tools
 
@@ -101,7 +115,7 @@ db-connector-mcp
 {
   "mcpServers": {
     "db-connector": {
-      "command": "db-connector-mcp"
+      "url": "http://127.0.0.1:8080/mcp"
     }
   }
 }
@@ -110,7 +124,7 @@ db-connector-mcp
 ### Claude Code
 
 ```bash
-claude mcp add db-connector -- db-connector-mcp
+claude mcp add db-connector --transport sse --url http://127.0.0.1:8080/mcp
 ```
 
 ### VS Code / Cline / Roo Code（`.vscode/mcp.json`）
@@ -119,8 +133,8 @@ claude mcp add db-connector -- db-connector-mcp
 {
   "servers": {
     "db-connector": {
-      "type": "stdio",
-      "command": "db-connector-mcp"
+      "type": "sse",
+      "url": "http://127.0.0.1:8080/mcp"
     }
   }
 }
@@ -131,13 +145,17 @@ claude mcp add db-connector -- db-connector-mcp
 | 变量 | 必填 | 说明 |
 |------|------|------|
 | `DBCONNECTOR_CRYPTO_KEY` | 否 | 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥）。未设置时自动生成并保存到 `data/.crypto-key`，无需手动配置 |
+| `DBCONNECTOR_PORT` | 否 | Java 后端端口（默认 8080） |
+| `DBCONNECTOR_WEB_PORT` | 否 | Web 控制台端口（默认 8081） |
 
 ## 技术栈
 
-- Java 25 + Micronaut 5.2.0 + Micronaut MCP Server 2.1.0（STDIO 传输）
+- Java 25 + Micronaut 5.2.0 + Micronaut MCP Server 2.1.0（Streamable HTTP 传输）
+- Micronaut HTTP Server Netty（REST API + SSE endpoint）
 - GraalVM Native Image（单文件分发，无需 JRE）
 - 达梦驱动 `DmJdbcDriver11 8.1.4.125`（官方 JDBC 驱动，随项目分发）
 - JSqlParser（SQL 预检）、HikariCP（动态连接池）、H2（元数据/审计存储）
+- npm + Express（前端静态文件服务）
 
 ## 开发
 

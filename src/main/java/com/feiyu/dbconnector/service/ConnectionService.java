@@ -11,7 +11,10 @@ import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.repository.DbConnectionRepository;
 import com.feiyu.dbconnector.security.AesCredentialCipher;
 import com.zaxxer.hikari.HikariDataSource;
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Singleton;
+
+import java.util.UUID;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -97,6 +100,7 @@ public class ConnectionService {
             throw new BizException(ErrorCode.VALIDATION_ERROR, "连接名称已存在: " + form.getName());
         }
         DbConnection c = new DbConnection();
+        c.setId(UUID.randomUUID().toString());
         applyForm(c, form);
         return repository.save(c);
     }
@@ -181,5 +185,6 @@ public class ConnectionService {
         repository.deleteById(id);
     }
 
+    @Serdeable
     public record TestResult(boolean ok, long durationMs, String message) {}
 }

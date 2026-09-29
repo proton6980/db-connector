@@ -5,9 +5,26 @@ micronaut:
     enabled: false
   mcp:
     server:
-      transport: STDIO
+      transport: HTTP
   server:
-    port: -1
+    port: ${DBCONNECTOR_PORT:8080}
+    cors:
+      enabled: true
+      configurations:
+        web:
+          allowed-origins:
+            - http://127.0.0.1:8081
+            - http://localhost:8081
+          allowed-methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          allowed-headers:
+            - Content-Type
+            - Authorization
+            - X-CSRF-TOKEN
   scheduler:
     enabled: true
 

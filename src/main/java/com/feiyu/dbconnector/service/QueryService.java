@@ -5,6 +5,7 @@ import com.feiyu.dbconnector.common.ErrorCode;
 import com.feiyu.dbconnector.config.QueryProperties;
 import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.security.SafetyGuardService;
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Singleton;
 
 import javax.sql.DataSource;
@@ -25,8 +26,10 @@ import java.util.regex.Pattern;
 @Singleton
 public class QueryService {
 
+    @Serdeable
     public record Column(String name, String type) {}
 
+    @Serdeable
     public record QueryResult(List<Column> columns, List<Map<String, Object>> rows,
                               int rowCount, boolean truncated, long durationMs) {}
 

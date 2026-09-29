@@ -4,10 +4,12 @@ import io.micronaut.data.annotation.AutoPopulated;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import io.micronaut.data.annotation.MappedProperty;
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.annotation.Nullable;
 
 import java.time.LocalDateTime;
 
+@Serdeable
 @MappedEntity("sql_audit_log")
 public class SqlAuditLog {
 

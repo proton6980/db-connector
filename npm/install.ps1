@@ -44,10 +44,9 @@ Write-Host "  Binary: $Dest"
 Write-Host "  Command: $CmdName"
 Write-Host ""
 Write-Host "Usage:"
-Write-Host "  db-connector-mcp                                    # Start MCP server (STDIO mode)"
-Write-Host "  db-connector-mcp --spring.profiles.active=stdio     # Explicit STDIO mode"
+Write-Host "  db-connector-mcp                                    # Start MCP SSE server + Web console"
 Write-Host ""
 Write-Host "MCP client configuration:"
-Write-Host '  { "command": "db-connector-mcp" }'
+Write-Host '  { "url": "http://127.0.0.1:8080/sse" }'
 Write-Host ""
 Write-Host "Please restart your terminal to update PATH."

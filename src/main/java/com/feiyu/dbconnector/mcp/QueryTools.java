@@ -23,7 +23,25 @@ public class QueryTools {
             + "参数用 :name 占位符并通过 params 传入（绑定，不拼接）。"
             + "connection 为连接 ID 或名称（先用 list_connections 查看）。")
     @Audited
-    public Object query_database(String connection, String sql, Map<String, Object> params) {
-        return queryService.run(connections.resolve(connection), sql, params, null);
+    public String query_database(String connection, String sql, Map<String, Object> params) {
+        QueryService.QueryResult result = queryService.run(connections.resolve(connection), sql, params, null);
+        return formatResult(result);
+    }
+
+    private String formatResult(QueryService.QueryResult r) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("列: ");
+        for (int i = 0; i < r.columns().size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(r.columns().get(i).name()).append("(").append(r.columns().get(i).type()).append(")");
+        }
+        sb.append("\n行数: ").append(r.rowCount());
+        if (r.truncated()) sb.append(" (已截断)");
+        sb.append("\n耗时: ").append(r.durationMs()).append("ms\n");
+        for (Map<String, Object> row : r.rows()) {
+            sb.append(row.values().stream().map(v -> v == null ? "NULL" : v.toString())
+                    .reduce((a, b) -> a + " | " + b).orElse("")).append("\n");
+        }
+        return sb.toString();
     }
 }

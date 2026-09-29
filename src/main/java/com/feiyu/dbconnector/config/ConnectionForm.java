@@ -1,5 +1,8 @@
 package com.feiyu.dbconnector.config;
 
+import io.micronaut.serde.annotation.Serdeable;
+
+@Serdeable
 public class ConnectionForm {
 
     private String name;
