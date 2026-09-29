@@ -1,6 +1,6 @@
 {
   "name": "db-connector-mcp",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Database Connector MCP Server - connect, query, and manage any database via MCP protocol",
   "keywords": [
     "mcp",
