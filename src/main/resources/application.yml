@@ -7,14 +7,14 @@ micronaut:
     server:
       transport: HTTP
   server:
-    port: ${DBCONNECTOR_PORT:8080}
+    port: ${DBCONNECTOR_PORT:63306}
     cors:
       enabled: true
       configurations:
         web:
           allowed-origins:
-            - http://127.0.0.1:8081
-            - http://localhost:8081
+            - http://127.0.0.1:${DBCONNECTOR_WEB_PORT:68080}
+            - http://localhost:${DBCONNECTOR_WEB_PORT:68080}
           allowed-methods:
             - GET
             - POST

@@ -218,7 +218,7 @@ cmd_build() {
     sleep 5
 
     local http_code
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/ 2>/dev/null || echo "000")
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:63306/ 2>/dev/null || echo "000")
     kill "$app_pid" 2>/dev/null || true
     wait "$app_pid" 2>/dev/null || true
 

@@ -9,7 +9,7 @@ public class ConsoleTools {
     @Tool(description = "获取 Web 管理控制台地址。控制台提供连接管理、查询执行、审计日志、仪表盘等功能。")
     public String open_console() {
         String portStr = System.getenv("DBCONNECTOR_PORT");
-        int javaPort = 8080;
+        int javaPort = 63306;
         if (portStr != null && !portStr.isBlank()) {
             try {
                 javaPort = Integer.parseInt(portStr);
@@ -17,7 +17,7 @@ public class ConsoleTools {
             }
         }
         String webPortStr = System.getenv("DBCONNECTOR_WEB_PORT");
-        int webPort = 8081;
+        int webPort = 68080;
         if (webPortStr != null && !webPortStr.isBlank()) {
             try {
                 webPort = Integer.parseInt(webPortStr);

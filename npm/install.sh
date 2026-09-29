@@ -118,11 +118,13 @@ main() {
   echo "  db-connector-mcp                                    # Start MCP SSE server + Web console"
   echo ""
   echo "After starting, two services are available:"
-  echo "  MCP SSE Endpoint:  http://127.0.0.1:8080/sse"
-  echo "  Web Console:       http://127.0.0.1:8081"
+  echo "  MCP SSE Endpoint:  http://127.0.0.1:63306/mcp"
+  echo "  Web Console:       http://127.0.0.1:68080"
+  echo ""
+  echo "(若默认端口被占用，启动时将自动选择空闲端口)"
   echo ""
   echo "MCP client configuration (add to your MCP settings):"
-  echo '  { "url": "http://127.0.0.1:8080/sse" }'
+  echo '  { "url": "http://127.0.0.1:63306/mcp" }'
   echo ""
   if [ -n "$SHELL_RC" ]; then
     echo "Please restart your shell or run: source ${SHELL_RC}"

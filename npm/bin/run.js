@@ -3,10 +3,11 @@ const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
+const net = require("net");
 const { getBinaryPath } = require("./platform");
 
-const JAVA_PORT = parseInt(process.env.DBCONNECTOR_PORT || "8080", 10);
-const WEB_PORT = parseInt(process.env.DBCONNECTOR_WEB_PORT || "8081", 10);
+const preferredJavaPort = parseInt(process.env.DBCONNECTOR_PORT || "63306", 10);
+const preferredWebPort = parseInt(process.env.DBCONNECTOR_WEB_PORT || "68080", 10);
 const binaryPath = getBinaryPath();
 
 if (!fs.existsSync(binaryPath)) {
@@ -15,29 +16,58 @@ if (!fs.existsSync(binaryPath)) {
   process.exit(1);
 }
 
-const java = spawn(binaryPath, [], {
-  stdio: "pipe",
-  env: { ...process.env, DBCONNECTOR_PORT: String(JAVA_PORT) },
-});
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.on("error", () => resolve(false));
+    server.listen(port, "127.0.0.1", () => {
+      server.close(() => resolve(true));
+    });
+  });
+}
 
-java.stdout.on("data", (data) => {
-  process.stdout.write(`[java] ${data}`);
-});
+async function findAvailablePort(preferred, maxTries = 100) {
+  for (let port = preferred; port < preferred + maxTries; port++) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(
+    `No available port found in range ${preferred}–${preferred + maxTries - 1}`
+  );
+}
 
-java.stderr.on("data", (data) => {
-  process.stderr.write(`[java] ${data}`);
-});
+let javaPort, webPort, java; // resolved at runtime
 
-java.on("close", (code) => {
-  console.error(`Java process exited with code ${code}`);
-  process.exit(code || 1);
-});
+function startJava(port) {
+  java = spawn(binaryPath, [], {
+    stdio: "pipe",
+    env: {
+      ...process.env,
+      DBCONNECTOR_PORT: String(port),
+      DBCONNECTOR_WEB_PORT: "", // will be set after web port is resolved; placeholder
+    },
+  });
+
+  java.stdout.on("data", (data) => {
+    process.stdout.write(`[java] ${data}`);
+  });
+
+  java.stderr.on("data", (data) => {
+    process.stderr.write(`[java] ${data}`);
+  });
+
+  java.on("close", (code) => {
+    console.error(`Java process exited with code ${code}`);
+    process.exit(code || 1);
+  });
+}
 
 function waitForJava(maxRetries, interval) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     function check() {
-      const req = http.get(`http://127.0.0.1:${JAVA_PORT}/`, (res) => {
+      const req = http.get(`http://127.0.0.1:${javaPort}/`, (res) => {
         res.resume();
         resolve();
       });
@@ -64,10 +94,26 @@ function waitForJava(maxRetries, interval) {
 }
 
 async function startFrontend() {
+  // 1. Find available Java port
+  javaPort = await findAvailablePort(preferredJavaPort);
+  if (javaPort !== preferredJavaPort) {
+    console.warn(`Port ${preferredJavaPort} is in use, using ${javaPort} instead`);
+  }
+
+  // 2. Start Java first to occupy the port
+  startJava(javaPort);
+
+  // 3. Wait for Java to be ready
   try {
     await waitForJava(30, 1000);
   } catch (err) {
     console.error(`Warning: ${err.message}. Starting frontend anyway...`);
+  }
+
+  // 4. Find available Web port (Java already occupies javaPort, no conflict)
+  webPort = await findAvailablePort(preferredWebPort);
+  if (webPort !== preferredWebPort) {
+    console.warn(`Port ${preferredWebPort} is in use, using ${webPort} instead`);
   }
 
   const frontendDir = path.join(__dirname, "..", "frontend");
@@ -91,7 +137,7 @@ async function startFrontend() {
     next();
   });
 
-  const apiUrl = `http://127.0.0.1:${JAVA_PORT}`;
+  const apiUrl = `http://127.0.0.1:${javaPort}`;
 
   app.get("/*.html", (req, res, next) => {
     const filePath = path.join(frontendDir, req.path);
@@ -109,7 +155,7 @@ async function startFrontend() {
 
   app.use(express.static(frontendDir));
 
-  app.listen(WEB_PORT, "127.0.0.1", () => {
+  app.listen(webPort, "127.0.0.1", () => {
     printInfo();
   });
 }
@@ -119,23 +165,25 @@ function printInfo() {
   console.log(``);
   console.log(`  db-connector-mcp v${pkg.version}`);
   console.log(`  ─────────────────────────────────────────────`);
-  console.log(`  MCP SSE Endpoint:  http://127.0.0.1:${JAVA_PORT}/mcp`);
-  console.log(`  Web Console:       http://127.0.0.1:${WEB_PORT}`);
+  console.log(`  MCP SSE Endpoint:  http://127.0.0.1:${javaPort}/mcp`);
+  console.log(`  Web Console:       http://127.0.0.1:${webPort}`);
   console.log(`  ─────────────────────────────────────────────`);
   console.log(``);
 }
 
 startFrontend().catch((err) => {
   console.error(`Failed to start frontend: ${err.message}`);
-  printInfo();
+  if (javaPort) {
+    printInfo();
+  }
 });
 
 process.on("SIGINT", () => {
-  java.kill("SIGTERM");
+  if (java) java.kill("SIGTERM");
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  java.kill("SIGTERM");
+  if (java) java.kill("SIGTERM");
   process.exit(0);
 });

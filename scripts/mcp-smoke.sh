@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Phase 1 MCP 冒烟：Streamable HTTP 握手 + tools/list + 4 个正式 tool 实调 + 错误码断言。
-# 前置：应用已在 8080 运行，且种子连接存在（默认 dm8-local）。
+# 前置：应用已在 63306 运行，且种子连接存在（默认 dm8-local）。
 # 用法：CONN=dm8-local scripts/mcp-smoke.sh
 set -euo pipefail
-BASE=${BASE:-http://localhost:8080}
+BASE=${BASE:-http://localhost:63306}
 CONN=${CONN:-dm8-local}
 MCP=${MCP:-$BASE/mcp}
 AH="Accept: text/event-stream, application/json"

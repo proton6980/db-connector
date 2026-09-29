@@ -47,6 +47,6 @@ Write-Host "Usage:"
 Write-Host "  db-connector-mcp                                    # Start MCP SSE server + Web console"
 Write-Host ""
 Write-Host "MCP client configuration:"
-Write-Host '  { "url": "http://127.0.0.1:8080/sse" }'
+Write-Host '  { "url": "http://127.0.0.1:63306/mcp" }'
 Write-Host ""
 Write-Host "Please restart your terminal to update PATH."
