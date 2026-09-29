@@ -82,16 +82,15 @@ db-connector-mcp
 
 ## MCP 客户端配置
 
+加密密钥由程序自动管理：首次启动时随机生成，存入 `data/.crypto-key`（权限 `rw-------`），后续启动自动读取。**无需在配置文件中暴露密钥，Agent 不可见。**
+
 ### Cursor（`.cursor/mcp.json`）
 
 ```json
 {
   "mcpServers": {
     "db-connector": {
-      "command": "db-connector-mcp",
-      "env": {
-        "DBCONNECTOR_CRYPTO_KEY": "your-AES-encryption-key"
-      }
+      "command": "db-connector-mcp"
     }
   }
 }
@@ -100,8 +99,7 @@ db-connector-mcp
 ### Claude Code
 
 ```bash
-claude mcp add db-connector -- db-connector-mcp \
-  --env DBCONNECTOR_CRYPTO_KEY=your-AES-encryption-key
+claude mcp add db-connector -- db-connector-mcp
 ```
 
 ### VS Code / Cline / Roo Code（`.vscode/mcp.json`）
@@ -111,10 +109,7 @@ claude mcp add db-connector -- db-connector-mcp \
   "servers": {
     "db-connector": {
       "type": "stdio",
-      "command": "db-connector-mcp",
-      "env": {
-        "DBCONNECTOR_CRYPTO_KEY": "your-AES-encryption-key"
-      }
+      "command": "db-connector-mcp"
     }
   }
 }
@@ -124,7 +119,7 @@ claude mcp add db-connector -- db-connector-mcp \
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
-| `DBCONNECTOR_CRYPTO_KEY` | 是 | 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥） |
+| `DBCONNECTOR_CRYPTO_KEY` | 否 | 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥）。未设置时自动生成并保存到 `data/.crypto-key`，无需手动配置 |
 
 ## 技术栈
 
