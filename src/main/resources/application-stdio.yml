@@ -1,6 +1,0 @@
-micronaut:
-  mcp:
-    server:
-      transport: STDIO
-  server:
-    port: -1
