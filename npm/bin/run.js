@@ -14,11 +14,6 @@ if (!fs.existsSync(binaryPath)) {
 
 const args = process.argv.slice(2);
 
-const hasProfile = args.some((a) => a.includes("spring.profiles.active"));
-if (!hasProfile) {
-  args.push("--spring.profiles.active=stdio");
-}
-
 try {
   execFileSync(binaryPath, args, {
     stdio: "inherit",

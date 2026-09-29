@@ -70,9 +70,20 @@ db-connector-mcp
 
 ## MCP Tools
 
+### 连接管理
+
 | Tool | 说明 |
 |------|------|
 | `list_connections` | 列出全部 active 连接（id、名称、类型、地址、库名） |
+| `create_connection` | 创建新连接：id + name + dbType(DM/H2) + host + port + username + password + ... |
+| `update_connection` | 修改已有连接：按 connection（ID 或名称）定位，仅传需改字段 |
+| `delete_connection` | 删除连接并关闭连接池，不可恢复 |
+| `test_connection` | 测试连接可达性（JDBC `SELECT 1`），返回成功/失败及耗时 |
+
+### 查询与元数据
+
+| Tool | 说明 |
+|------|------|
 | `query_database` | 只读查询：`connection`（ID 或名称）+ `sql` + `params`（`:name` 命名参数，绑定不拼接） |
 | `list_tables` | 表清单（schema、表注释） |
 | `describe_table` | 字段/类型/可空/默认值/注释/主键/索引，`table` 可写 `TABLE` 或 `SCHEMA.TABLE` |
@@ -123,7 +134,7 @@ claude mcp add db-connector -- db-connector-mcp
 
 ## 技术栈
 
-- Java 25 + Micronaut 5.2 + Micronaut MCP Server 2.1（STDIO 传输）
+- Java 25 + Micronaut 5.2.0 + Micronaut MCP Server 2.1.0（STDIO 传输）
 - GraalVM Native Image（单文件分发，无需 JRE）
 - 达梦驱动 `DmJdbcDriver11 8.1.4.125`（官方 JDBC 驱动，随项目分发）
 - JSqlParser（SQL 预检）、HikariCP（动态连接池）、H2（元数据/审计存储）

@@ -116,8 +116,6 @@ main() {
   echo ""
   echo "Usage:"
   echo "  db-connector-mcp                                    # Start MCP server (STDIO mode)"
-  echo "  db-connector-mcp --spring.profiles.active=stdio     # Explicit STDIO mode"
-  echo "  db-connector-mcp --server.port=9090                 # Custom HTTP port"
   echo ""
   echo "MCP client configuration (add to your MCP settings):"
   echo '  { "command": "db-connector-mcp" }'
