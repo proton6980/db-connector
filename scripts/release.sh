@@ -7,6 +7,8 @@ POM_XML="${PROJECT_DIR}/pom.xml"
 PACKAGE_JSON="${PROJECT_DIR}/npm/package.json"
 PLATFORM_JS="${PROJECT_DIR}/npm/bin/platform.js"
 INSTALL_SH="${PROJECT_DIR}/npm/install.sh"
+INSTALL_PS1="${PROJECT_DIR}/npm/install.ps1"
+README_MD="${PROJECT_DIR}/README.md"
 DIST_DIR="${PROJECT_DIR}/dist"
 
 usage() {
@@ -112,18 +114,32 @@ cmd_sync() {
     echo "  ✓ npm/package.json"
   fi
 
-  # platform.js
+  # platform.js — FALLBACK_TAG (used when GitHub API is unreachable)
   if [ -f "$PLATFORM_JS" ]; then
-    sed -E -i.bak "s|const RELEASE_TAG = \"v[0-9]+\.[0-9]+\.[0-9]+\";|const RELEASE_TAG = \"${tag}\";|" "$PLATFORM_JS"
+    sed -E -i.bak "s|const FALLBACK_TAG = \"v[0-9]+\.[0-9]+\.[0-9]+\";|const FALLBACK_TAG = \"${tag}\";|" "$PLATFORM_JS"
     rm -f "${PLATFORM_JS}.bak"
     echo "  ✓ npm/bin/platform.js"
   fi
 
-  # install.sh
+  # install.sh — FALLBACK_TAG
   if [ -f "$INSTALL_SH" ]; then
-    sed -E -i.bak "s|RELEASE_TAG=\"v[0-9]+\.[0-9]+\.[0-9]+\"|RELEASE_TAG=\"${tag}\"|" "$INSTALL_SH"
+    sed -E -i.bak "s|FALLBACK_TAG=\"v[0-9]+\.[0-9]+\.[0-9]+\"|FALLBACK_TAG=\"${tag}\"|" "$INSTALL_SH"
     rm -f "${INSTALL_SH}.bak"
     echo "  ✓ npm/install.sh"
+  fi
+
+  # install.ps1 — FallbackTag
+  if [ -f "$INSTALL_PS1" ]; then
+    sed -E -i.bak "s|\\\$FallbackTag = \"v[0-9]+\.[0-9]+\.[0-9]+\"|\\\$FallbackTag = \"${tag}\"|" "$INSTALL_PS1"
+    rm -f "${INSTALL_PS1}.bak"
+    echo "  ✓ npm/install.ps1"
+  fi
+
+  # README.md — JAR file references db-connector-X.X.X.jar
+  if [ -f "$README_MD" ]; then
+    sed -E -i.bak "s|db-connector-[0-9]+\.[0-9]+\.[0-9]+\.jar|db-connector-${ver}.jar|g" "$README_MD"
+    rm -f "${README_MD}.bak"
+    echo "  ✓ README.md"
   fi
 
   echo "Done. All files synced to version ${ver}."
