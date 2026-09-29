@@ -26,6 +26,9 @@ replay_pid*
 # Maven
 target/
 
+# Release dist
+dist/
+
 # IDE
 .idea/
 *.iml
