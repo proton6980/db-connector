@@ -1,6 +1,6 @@
 {
   "name": "db-connector-mcp",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Database Connector MCP Server - connect, query, and manage any database via MCP protocol",
   "keywords": [
     "mcp",
@@ -47,9 +47,9 @@
     "arm64"
   ],
   "optionalDependencies": {
-    "db-connector-mcp-darwin-arm64": "0.5.0",
-    "db-connector-mcp-darwin-x64": "0.5.0",
-    "db-connector-mcp-linux-x64": "0.5.0",
-    "db-connector-mcp-win32-x64": "0.5.0"
+    "db-connector-mcp-darwin-arm64": "0.5.1",
+    "db-connector-mcp-darwin-x64": "0.5.1",
+    "db-connector-mcp-linux-x64": "0.5.1",
+    "db-connector-mcp-win32-x64": "0.5.1"
   }
 }
