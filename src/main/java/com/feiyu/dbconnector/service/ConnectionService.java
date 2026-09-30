@@ -125,7 +125,7 @@ public class ConnectionService {
             throw new BizException(ErrorCode.VALIDATION_ERROR, "连接名称已存在: " + form.getName());
         }
         applyForm(c, form);
-        c = repository.save(c);
+        c = repository.update(c);
         dataSourceManager.close(id);
         return c;
     }
