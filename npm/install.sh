@@ -3,15 +3,8 @@ set -e
 
 REPO="proton6980/db-connector"
 FALLBACK_TAG="v0.4.0"
-INSTALL_DIR="${HOME}/.db-connector-mcp"
+INSTALL_DIR="${HOME}/.db-connector-mcp/db-connector"
 API_LATEST="https://api.github.com/repos/${REPO}/releases/latest"
-
-DARWIN_ARM64="db-connector-darwin-arm64"
-DARWIN_X64="db-connector-darwin-x64"
-LINUX_X64="db-connector-linux-x64"
-WINDOWS_X64="db-connector-windows-x64.exe"
-
-DARWIN_ARM64_LEGACY="db-connector"
 
 fetch_latest_tag() {
   if command -v curl > /dev/null 2>&1; then
@@ -22,12 +15,6 @@ fetch_latest_tag() {
     fi
   fi
   echo "$FALLBACK_TAG"
-}
-
-build_jar_name() {
-  TAG="$1"
-  VERSION=$(echo "$TAG" | sed 's/^v//')
-  echo "db-connector-${VERSION}.jar"
 }
 
 detect_platform() {
@@ -56,14 +43,14 @@ detect_platform() {
   PLATFORM="${OS}-${ARCH}"
 }
 
-get_binary_name() {
+get_archive_name() {
   case "$PLATFORM" in
-    darwin-arm64) echo "$DARWIN_ARM64" ;;
-    darwin-x64)   echo "$DARWIN_X64" ;;
-    linux-x64)    echo "$LINUX_X64" ;;
-    windows-x64)  echo "$WINDOWS_X64" ;;
+    darwin-arm64) echo "db-connector-darwin-arm64.tar.gz" ;;
+    darwin-x64)   echo "db-connector-darwin-x64.tar.gz" ;;
+    linux-x64)    echo "db-connector-linux-x64.tar.gz" ;;
+    windows-x64)  echo "db-connector-windows-x64.zip" ;;
     *)
-      echo "No binary available for platform: $PLATFORM"
+      echo "No archive available for platform: $PLATFORM"
       echo "Supported: darwin-arm64, darwin-x64, linux-x64, windows-x64"
       exit 1
       ;;
@@ -78,26 +65,20 @@ download() {
     HTTP_CODE=$(curl -sL --progress-bar -o "$DEST" -w "%{http_code}" "$URL")
     if [ "$HTTP_CODE" = "200" ]; then
       return 0
-    elif [ "$HTTP_CODE" = "404" ]; then
-      rm -f "$DEST"
-      return 1
     else
       rm -f "$DEST"
       echo "Error: HTTP ${HTTP_CODE} from ${URL}"
-      return 2
+      return 1
     fi
   elif command -v wget > /dev/null 2>&1; then
     wget -q --show-progress -O "$DEST" "$URL" 2>&1
     WGET_EXIT=$?
     if [ $WGET_EXIT -eq 0 ]; then
       return 0
-    elif [ $WGET_EXIT -eq 8 ]; then
-      rm -f "$DEST"
-      return 1
     else
       rm -f "$DEST"
       echo "Error: wget failed with exit code ${WGET_EXIT}"
-      return 2
+      return 1
     fi
   else
     echo "Error: curl or wget is required"
@@ -105,99 +86,75 @@ download() {
   fi
 }
 
-try_download() {
-  URL="$1"
-  DEST="$2"
-  LABEL="$3"
-
-  echo "  Trying ${LABEL}..."
-  download "$URL" "$DEST"
-  return $?
-}
-
 main() {
   detect_platform
 
+  if ! command -v node > /dev/null 2>&1; then
+    echo "Error: Node.js is required but not found."
+    echo "Please install Node 16+ from https://nodejs.org/ and rerun this script."
+    exit 1
+  fi
+
   RELEASE_TAG=$(fetch_latest_tag)
-  JAR_FALLBACK=$(build_jar_name "$RELEASE_TAG")
+  ARCHIVE_NAME="$(get_archive_name)"
+  ARCHIVE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${ARCHIVE_NAME}"
 
-  BINARY_NAME="$(get_binary_name)"
-  NATIVE_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${BINARY_NAME}"
-  JAR_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${JAR_FALLBACK}"
-
-  if [ "$PLATFORM" = "darwin-arm64" ]; then
-    LEGACY_URL="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${DARWIN_ARM64_LEGACY}"
-  fi
-
-  if [ "$OS" = "windows" ]; then
-    CMD_NAME="db-connector-mcp.exe"
-  else
-    CMD_NAME="db-connector-mcp"
-  fi
-
-  mkdir -p "$INSTALL_DIR"
-
-  DEST="${INSTALL_DIR}/${BINARY_NAME}"
-  LINK="${INSTALL_DIR}/${CMD_NAME}"
+  PARENT_DIR="${HOME}/.db-connector-mcp"
+  mkdir -p "$PARENT_DIR"
 
   echo "Installing db-connector-mcp for ${PLATFORM} (${RELEASE_TAG})..."
   echo ""
 
-  try_download "$NATIVE_URL" "$DEST" "native (${BINARY_NAME})"
-  DL_RESULT=$?
+  TMP_ARCHIVE=$(mktemp)
+  trap 'rm -f "$TMP_ARCHIVE"' EXIT
 
-  IS_JAR=false
-  if [ $DL_RESULT -eq 1 ]; then
-    if [ -n "$LEGACY_URL" ]; then
-      echo "  Standard native not found, trying legacy alias..."
-      DEST="${INSTALL_DIR}/${DARWIN_ARM64_LEGACY}"
-      try_download "$LEGACY_URL" "$DEST" "legacy (${DARWIN_ARM64_LEGACY})"
-      DL_RESULT=$?
-    fi
-
-    if [ $DL_RESULT -eq 1 ]; then
-      echo "  Native binary not available, falling back to JAR..."
-      DEST="${INSTALL_DIR}/${JAR_FALLBACK}"
-      try_download "$JAR_URL" "$DEST" "JAR (${JAR_FALLBACK})"
-      DL_RESULT=$?
-      IS_JAR=true
-    fi
-  fi
-
-  if [ $DL_RESULT -ne 0 ]; then
+  echo "  Downloading ${ARCHIVE_NAME}..."
+  download "$ARCHIVE_URL" "$TMP_ARCHIVE"
+  if [ $? -ne 0 ]; then
     echo "Download failed. Please check the release page:"
     echo "  https://github.com/${REPO}/releases/tag/${RELEASE_TAG}"
     exit 1
   fi
 
+  rm -rf "$INSTALL_DIR"
+  mkdir -p "$INSTALL_DIR"
+
+  case "$ARCHIVE_NAME" in
+    *.tar.gz)
+      tar xzf "$TMP_ARCHIVE" -C "$PARENT_DIR"
+      ;;
+    *.zip)
+      if command -v unzip > /dev/null 2>&1; then
+        unzip -q -o "$TMP_ARCHIVE" -d "$PARENT_DIR"
+      else
+        python3 -c "
+import zipfile, sys
+with zipfile.ZipFile('$TMP_ARCHIVE') as z:
+    z.extractall('$PARENT_DIR')
+"
+      fi
+      ;;
+  esac
+
   if [ "$OS" = "windows" ]; then
-    if $IS_JAR; then
-      JAVA_CMD="java"
-      if [ -n "$JAVA_HOME" ]; then
-        JAVA_CMD="${JAVA_HOME}\\bin\\java.exe"
-      fi
-      cat > "$LINK" << WRAPPER
-@echo off
-"${JAVA_CMD}" -jar "${DEST}" %*
-WRAPPER
-    else
-      cp "$DEST" "$LINK"
-    fi
+    CMD_NAME="db-connector-mcp.cmd"
   else
-    if $IS_JAR; then
-      if ! command -v java > /dev/null 2>&1; then
-        echo "Warning: Java not found in PATH. Please install JDK 17+ from https://adoptium.net/"
-        echo "Then run: java -jar ${DEST}"
-      fi
-      cat > "$LINK" << WRAPPER
-#!/usr/bin/env sh
-exec java -jar "${DEST}" "\$@"
+    CMD_NAME="db-connector-mcp"
+  fi
+
+  LINK="${PARENT_DIR}/${CMD_NAME}"
+
+  if [ "$OS" = "windows" ]; then
+    cat > "$LINK" << WRAPPER
+@echo off
+node "${INSTALL_DIR}\\bin\\run.js" %*
 WRAPPER
-      chmod +x "$LINK"
-    else
-      chmod +x "$DEST"
-      ln -sf "$(basename "$DEST")" "$LINK"
-    fi
+  else
+    cat > "$LINK" << WRAPPER
+#!/usr/bin/env sh
+exec node "${INSTALL_DIR}/bin/run.js" "\$@"
+WRAPPER
+    chmod +x "$LINK"
   fi
 
   SHELL_RC=""
@@ -208,38 +165,35 @@ WRAPPER
   esac
 
   if [ -n "$SHELL_RC" ]; then
-    PATH_LINE="export PATH=\"${INSTALL_DIR}:\$PATH\""
-    if ! grep -qF "$INSTALL_DIR" "$SHELL_RC" 2>/dev/null; then
+    PATH_LINE="export PATH=\"${PARENT_DIR}:\$PATH\""
+    if ! grep -qF "$PARENT_DIR" "$SHELL_RC" 2>/dev/null; then
       echo "" >> "$SHELL_RC"
       echo "$PATH_LINE" >> "$SHELL_RC"
-      echo "Added ${INSTALL_DIR} to PATH in ${SHELL_RC}"
+      echo "Added ${PARENT_DIR} to PATH in ${SHELL_RC}"
     fi
   fi
 
   echo ""
   echo "Installed successfully!"
-  echo "  Binary: ${DEST}"
-  echo "  Command: ${CMD_NAME}"
+  echo "  Location: ${INSTALL_DIR}"
+  echo "  Command:  ${CMD_NAME}"
   echo ""
   echo "Usage:"
   echo "  db-connector-mcp                                    # Start MCP SSE server + Web console"
   echo ""
   echo "After starting, two services are available:"
   echo "  MCP SSE Endpoint:  http://127.0.0.1:63306/mcp"
-  echo "  Web Console:       http://127.0.0.1:68080"
+  echo "  Web Console:       http://127.0.0.1:63380"
   echo ""
   echo "(若默认端口被占用，启动时将自动选择空闲端口)"
   echo ""
   echo "MCP client configuration (add to your MCP settings):"
   echo '  { "url": "http://127.0.0.1:63306/mcp" }'
   echo ""
-  if $IS_JAR; then
-    echo "Note: Running via JAR (JDK 17+ required). Install JDK from https://adoptium.net/"
-  fi
   if [ -n "$SHELL_RC" ]; then
     echo "Please restart your shell or run: source ${SHELL_RC}"
   else
-    echo "Please add ${INSTALL_DIR} to your PATH"
+    echo "Please add ${PARENT_DIR} to your PATH"
   fi
 }
 

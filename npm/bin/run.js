@@ -4,51 +4,79 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const net = require("net");
-const { getBinaryPath, getLegacyPath } = require("./platform");
 
-function findJar() {
-  const nativeDir = path.join(__dirname, "native");
-  if (!fs.existsSync(nativeDir)) return null;
-  const files = fs.readdirSync(nativeDir);
-  const jar = files.find((f) => f.startsWith("db-connector-") && f.endsWith(".jar"));
-  return jar ? path.join(nativeDir, jar) : null;
+const PLATFORM_PACKAGES = {
+  "darwin-arm64": "db-connector-mcp-darwin-arm64",
+  "darwin-x64": "db-connector-mcp-darwin-x64",
+  "linux-x64": "db-connector-mcp-linux-x64",
+  "win32-x64": "db-connector-mcp-win32-x64",
+};
+
+const PLATFORM_LAUNCHERS = {
+  "darwin-arm64": "bin/db-connector",
+  "darwin-x64": "bin/db-connector",
+  "linux-x64": "bin/db-connector",
+  "win32-x64": "bin/db-connector.cmd",
+};
+
+function getPlatformKey() {
+  return `${process.platform}-${process.arch}`;
+}
+
+function findRuntime() {
+  const platformKey = getPlatformKey();
+  const javaExe = process.platform === "win32" ? "java.exe" : "java";
+
+  // 1. Adjacent JRE (GitHub Release layout: jre/ and db-connector.jar next to bin/)
+  const pkgRoot = path.join(__dirname, "..");
+  const adjacentJava = path.join(pkgRoot, "jre", "bin", javaExe);
+  const adjacentJar = path.join(pkgRoot, "db-connector.jar");
+  if (fs.existsSync(adjacentJava) && fs.existsSync(adjacentJar)) {
+    return { java: adjacentJava, jar: adjacentJar, source: "adjacent" };
+  }
+
+  // 2. Platform package via require.resolve (npx optionalDependencies)
+  const pkgName = PLATFORM_PACKAGES[platformKey];
+  if (pkgName) {
+    try {
+      const launcherRel = PLATFORM_LAUNCHERS[platformKey];
+      const launcherPath = require.resolve(`${pkgName}/${launcherRel}`);
+      const platformPkgRoot = path.join(path.dirname(launcherPath), "..");
+      const platformJava = path.join(platformPkgRoot, "jre", "bin", javaExe);
+      const platformJar = path.join(platformPkgRoot, "db-connector.jar");
+      if (fs.existsSync(platformJava) && fs.existsSync(platformJar)) {
+        return { java: platformJava, jar: platformJar, source: `platform-package:${pkgName}` };
+      }
+    } catch (_) {}
+  }
+
+  // 3. Local platforms directory (dev/debug after release.sh build)
+  if (pkgName) {
+    const localRoot = path.join(__dirname, "..", "platforms", platformKey);
+    const localJava = path.join(localRoot, "jre", "bin", javaExe);
+    const localJar = path.join(localRoot, "db-connector.jar");
+    if (fs.existsSync(localJava) && fs.existsSync(localJar)) {
+      return { java: localJava, jar: localJar, source: `local:${platformKey}` };
+    }
+  }
+
+  return null;
 }
 
 const preferredJavaPort = parseInt(process.env.DBCONNECTOR_PORT || "63306", 10);
 const preferredWebPort = parseInt(process.env.DBCONNECTOR_WEB_PORT || "63380", 10);
 
-let binaryPath = getBinaryPath();
-let isJar = false;
-
-if (!fs.existsSync(binaryPath)) {
-  const legacyPath = getLegacyPath();
-  if (legacyPath && fs.existsSync(legacyPath)) {
-    binaryPath = legacyPath;
-  } else {
-    const jarPath = findJar();
-    if (jarPath) {
-      binaryPath = jarPath;
-      isJar = true;
-    } else {
-      console.error("Binary not found. Please run: npm install");
-      console.error(`Expected at: ${getBinaryPath()}, or db-connector-*.jar`);
-      process.exit(1);
-    }
+const runtime = findRuntime();
+if (!runtime) {
+  const platformKey = getPlatformKey();
+  const pkgName = PLATFORM_PACKAGES[platformKey];
+  console.error("No Java runtime found for this platform.");
+  console.error(`Platform: ${platformKey}`);
+  if (pkgName) {
+    console.error(`Expected platform package: ${pkgName}`);
   }
-}
-
-if (isJar) {
-  const javaHome = process.env.JAVA_HOME;
-  const javaCmd = javaHome ? path.join(javaHome, "bin", "java") : "java";
-  try {
-    const { execSync } = require("child_process");
-    execSync(`"${javaCmd}" -version`, { stdio: "pipe" });
-  } catch (e) {
-    console.error("Java is required to run db-connector (JAR fallback mode).");
-    console.error(`Native binary not available for this platform, and Java was not found.`);
-    console.error(`Please install JDK 17+ from https://adoptium.net/`);
-    process.exit(1);
-  }
+  console.error("Please reinstall db-connector-mcp or report this issue.");
+  process.exit(1);
 }
 
 function isPortAvailable(port) {
@@ -72,30 +100,17 @@ async function findAvailablePort(preferred, maxTries = 100) {
   );
 }
 
-let javaPort, webPort, java; // resolved at runtime
+let javaPort, webPort, java;
 
 function startJava(port) {
-  if (isJar) {
-    const javaHome = process.env.JAVA_HOME;
-    const javaCmd = javaHome ? path.join(javaHome, "bin", "java") : "java";
-    java = spawn(javaCmd, ["-jar", binaryPath], {
-      stdio: "pipe",
-      env: {
-        ...process.env,
-        DBCONNECTOR_PORT: String(port),
-        DBCONNECTOR_WEB_PORT: "",
-      },
-    });
-  } else {
-    java = spawn(binaryPath, [], {
-      stdio: "pipe",
-      env: {
-        ...process.env,
-        DBCONNECTOR_PORT: String(port),
-        DBCONNECTOR_WEB_PORT: "",
-      },
-    });
-  }
+  java = spawn(runtime.java, ["-jar", runtime.jar], {
+    stdio: "pipe",
+    env: {
+      ...process.env,
+      DBCONNECTOR_PORT: String(port),
+      DBCONNECTOR_WEB_PORT: "",
+    },
+  });
 
   java.stdout.on("data", (data) => {
     process.stdout.write(`[java] ${data}`);

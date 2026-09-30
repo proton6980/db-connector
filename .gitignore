@@ -47,4 +47,9 @@ frontend/
 opencode.json
 npm/bin/native/
 npm/data/
-npm/node_modules/
+npm/node_modules
+npm/platforms/darwin-arm64/jre
+npm/platforms/darwin-x64/jre
+npm/platforms/linux-x64/jre
+npm/platforms/win32-x64/jre
+npm/platforms/*/db-connector.jar
