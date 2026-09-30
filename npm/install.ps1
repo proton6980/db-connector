@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $Repo = "proton6980/db-connector"
-$FallbackTag = "v0.5.3"
+$FallbackTag = "v0.6.0"
 $ParentDir = "$env:USERPROFILE\.db-connector-mcp"
 $InstallDir = "$ParentDir\db-connector"
 $ApiLatest = "https://api.github.com/repos/$Repo/releases/latest"
