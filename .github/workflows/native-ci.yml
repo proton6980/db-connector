@@ -41,10 +41,10 @@ jobs:
         run: |
           mkdir -p npm/platforms/linux-x64/bin
           cat > npm/platforms/linux-x64/bin/db-connector <<'LAUNCHER'
-          #!/bin/sh
-          APP_HOME=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-          exec "$APP_HOME/jre/bin/java" -jar "$APP_HOME/db-connector.jar" "$@"
-          LAUNCHER
+#!/bin/sh
+APP_HOME=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+exec "$APP_HOME/jre/bin/java" -jar "$APP_HOME/db-connector.jar" "$@"
+LAUNCHER
           chmod +x npm/platforms/linux-x64/bin/db-connector
 
       - name: Smoke Test (Web mode)

@@ -42,6 +42,11 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Build & Package
         shell: bash
         run: |
@@ -50,12 +55,12 @@ jobs:
 
       - name: Publish Platform Package
         if: github.event_name == 'release' && env.NPM_TOKEN != ''
-        working-directory: npm/platforms/${{ matrix.label }}
+        working-directory: npm/platforms/${{ matrix.label == 'windows-x64' && 'win32-x64' || matrix.label }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
-          npm publish --access public
+          npm publish
 
       - name: Upload Release Asset (tar.gz)
         if: matrix.label != 'windows-x64' && github.event_name == 'release'
@@ -76,7 +81,7 @@ jobs:
           echo "=== Dry run: npm pack (main) ==="
           cd npm && npm pack --dry-run
           echo "=== Dry run: npm pack (platform: ${{ matrix.label }}) ==="
-          cd platforms/${{ matrix.label }} && npm pack --dry-run
+          cd platforms/${{ matrix.label == 'windows-x64' && 'win32-x64' || matrix.label }} && npm pack --dry-run
 
   publish-main:
     needs: build-platforms
@@ -87,10 +92,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Publish Main Package
         working-directory: npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
-          npm publish --access public
+          npm publish

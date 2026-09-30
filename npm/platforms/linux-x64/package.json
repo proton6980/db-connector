@@ -1,6 +1,6 @@
 {
   "name": "db-connector-mcp-linux-x64",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "db-connector-mcp runtime for linux-x64 (Temurin 25 JRE + JAR)",
   "license": "MIT",
   "os": ["linux"],

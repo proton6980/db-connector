@@ -54,14 +54,14 @@ npx db-connector-mcp
 | 服务 | 地址 | 说明 |
 |------|------|------|
 | MCP SSE Endpoint | `http://127.0.0.1:63306/mcp` | MCP 客户端连接此地址 |
-| Web 管理控制台 | `http://127.0.0.1:68080` | 浏览器打开此地址管理连接、查询、审计 |
+| Web 管理控制台 | `http://127.0.0.1:63380` | 浏览器打开此地址管理连接、查询、审计 |
 
 端口可通过环境变量配置：
-DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前端端口，默认 68080）。若默认端口被占用，启动时将自动选择空闲端口。
+DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前端端口，默认 63380）。若默认端口被占用，启动时将自动选择空闲端口。
 
 ## Web 管理控制台
 
-浏览器打开 `http://127.0.0.1:68080` 即可使用内置管理控制台：
+浏览器打开 `http://127.0.0.1:63380` 即可使用内置管理控制台：
 
 - **仪表盘**：近 24h 查询统计、错误率、Top SQL、连接池状态
 - **连接管理**：CRUD 数据库连接、测试连通性、重载连接池
@@ -131,7 +131,7 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 |------|------|------|
 | `DBCONNECTOR_CRYPTO_KEY` | 否 | 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥）。未设置时自动生成并保存到 `data/.crypto-key`，无需手动配置 |
 | `DBCONNECTOR_PORT` | 否 | Java 后端端口（默认 63306） |
-| `DBCONNECTOR_WEB_PORT` | 否 | Web 控制台端口（默认 68080） |
+| `DBCONNECTOR_WEB_PORT` | 否 | Web 控制台端口（默认 63380） |
 
 ## 技术栈
 
