@@ -18,15 +18,15 @@ public class ConnectionManageTools {
     }
 
     @Tool(description = "创建新的数据库连接。需要提供连接 ID、名称、数据库类型、主机、端口、用户名、密码等信息。" +
-            "数据库类型支持 DM（达梦）和 H2（开发测试用）。" +
+            "数据库类型支持 DM（达梦）、MySQL 和 H2（开发测试用）。" +
             "创建后会自动加密存储密码，可通过 list_connections 查看并使用新连接。")
     @Audited
     public String create_connection(
             @ToolArg(description = "连接唯一标识（英文数字下划线），如 'prod-dm'") String id,
             @ToolArg(description = "连接显示名称，如 '生产环境DM'") String name,
-            @ToolArg(description = "数据库类型：DM 或 H2") String dbType,
+            @ToolArg(description = "数据库类型：DM / MYSQL / H2") String dbType,
             @ToolArg(description = "主机地址，如 192.168.1.100") String host,
-            @ToolArg(description = "端口号，DM 默认 5236，H2 默认 9092") int port,
+            @ToolArg(description = "端口号，DM 默认 5236，MySQL 默认 3306，H2 默认 9092") int port,
             @ToolArg(description = "数据库用户名") String username,
             @ToolArg(description = "数据库密码（敏感信息，会被加密存储）") String password,
             @ToolArg(description = "数据库名/实例名，可选，传 null 跳过") String databaseName,

@@ -1,6 +1,6 @@
 # db-connector
 
-本地数据库 MCP sidecar：把已配置的数据库（P1：达梦 DM8）以 MCP tool 暴露给 Cursor / Claude Code / Grok CLI 等 AI 客户端，支持查询、DML、DDL、EXPLAIN + 元数据 + 全量审计。内置 Web 管理控制台，一次启动同时获得 MCP SSE 服务 + 可视化管理界面。
+本地数据库 MCP sidecar：把已配置的数据库（达梦 DM8、MySQL）以 MCP tool 暴露给 Cursor / Claude Code / Grok CLI 等 AI 客户端，支持查询、DML、DDL、EXPLAIN + 元数据 + 全量审计。内置 Web 管理控制台，一次启动同时获得 MCP SSE 服务 + 可视化管理界面。
 
 ## 安全边界
 
@@ -77,7 +77,7 @@ DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前�
 | Tool | 说明 |
 |------|------|
 | `list_connections` | 列出全部 active 连接（id、名称、类型、地址、库名） |
-| `create_connection` | 创建新连接：id + name + dbType(DM/H2) + host + port + username + password + ... |
+| `create_connection` | 创建新连接：id + name + dbType(DM/MYSQL/H2) + host + port + username + password + ... |
 | `update_connection` | 修改已有连接：按 connection（ID 或名称）定位，仅传需改字段 |
 | `delete_connection` | 删除连接并关闭连接池，不可恢复 |
 | `test_connection` | 测试连接可达性（JDBC `SELECT 1`），返回成功/失败及耗时 |
@@ -151,6 +151,7 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 - Micronaut HTTP Server Netty（REST API + SSE endpoint）
 - Temurin 25 JRE 随 npm 平台包发行（无需用户安装 JDK）
 - 达梦驱动 `DmJdbcDriver11 8.1.4.125`（官方 JDBC 驱动，随项目分发）
+- MySQL 驱动 `mysql-connector-j 26.7.0`（Micronaut BOM 统一管理版本）
 - JSqlParser（SQL 预检）、HikariCP（动态连接池）、H2（元数据/审计存储）
 - npm + Express（前端静态文件服务）
 
@@ -160,6 +161,9 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 mvn -f java/pom.xml verify                     # 全量测试
 # DM 容器在场时的连通/元数据探针：
 DM_URL=jdbc:dm://localhost:5236 DM_USER=SYSDBA DM_PASSWORD=SYSDBA001 mvn -f java/pom.xml test -Dtest='Dm*'
+# MySQL 实例的全链路冒烟：
+MYSQL_URL='jdbc:mysql://localhost:3306/testdb?useSSL=false&allowPublicKeyRetrieval=true' \
+  MYSQL_USER=root MYSQL_PASSWORD=*** mvn -f java/pom.xml test -Dtest='MysqlToolsSmokeTest'
 ```
 
 ## 版本管理

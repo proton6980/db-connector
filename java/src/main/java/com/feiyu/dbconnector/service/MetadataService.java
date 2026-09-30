@@ -18,6 +18,7 @@ import java.util.Set;
 public class MetadataService {
 
     private static final Set<String> DM_SYSTEM_SCHEMAS = Set.of("SYS", "SYSSSO", "SYSAUDITOR", "CTI_SYSDBA");
+    private static final Set<String> MYSQL_SYSTEM_CATALOGS = Set.of("information_schema", "mysql", "performance_schema", "sys");
 
     @Serdeable
     public record TableInfo(String schema, String name, String remarks) {}
@@ -33,32 +34,54 @@ public class MetadataService {
     public record DescribeResult(List<ColumnInfo> columns, List<IndexInfo> indexes) {}
 
     public List<TableInfo> listTables(DataSource ds) throws SQLException {
-        try (Connection conn = ds.getConnection();
-             ResultSet rs = conn.getMetaData().getTables(null, null, "%", new String[]{"TABLE"})) {
-            List<TableInfo> tables = new ArrayList<>();
-            while (rs.next()) {
-                String schema = rs.getString("TABLE_SCHEM");
-                if (DM_SYSTEM_SCHEMAS.contains(schema)) {
-                    continue;
+        try (Connection conn = ds.getConnection()) {
+            DatabaseMetaData md = conn.getMetaData();
+            boolean mysql = isMySql(md);
+            // MySQL 的库是 catalog：只列当前库；DM 用 schema：catalog 传 null 跨模式列出后过滤系统模式
+            String catalog = mysql ? conn.getCatalog() : null;
+            try (ResultSet rs = md.getTables(catalog, null, "%", new String[]{"TABLE"})) {
+                List<TableInfo> tables = new ArrayList<>();
+                while (rs.next()) {
+                    if (mysql) {
+                        String cat = rs.getString("TABLE_CAT");
+                        if (MYSQL_SYSTEM_CATALOGS.contains(cat)) {
+                            continue;
+                        }
+                        tables.add(new TableInfo(cat, rs.getString("TABLE_NAME"), rs.getString("REMARKS")));
+                    } else {
+                        String schema = rs.getString("TABLE_SCHEM");
+                        if (DM_SYSTEM_SCHEMAS.contains(schema)) {
+                            continue;
+                        }
+                        tables.add(new TableInfo(schema, rs.getString("TABLE_NAME"), rs.getString("REMARKS")));
+                    }
                 }
-                tables.add(new TableInfo(schema, rs.getString("TABLE_NAME"), rs.getString("REMARKS")));
+                return tables;
             }
-            return tables;
         }
     }
 
+    private static boolean isMySql(DatabaseMetaData md) throws SQLException {
+        String url = md.getURL();
+        return url != null && url.startsWith("jdbc:mysql:");
+    }
+
     public DescribeResult describeTable(DataSource ds, String table) throws SQLException {
-        String schema = null;
+        String prefix = null;
         String name = table;
         int dot = table.indexOf('.');
         if (dot > 0) {
-            schema = table.substring(0, dot);
+            prefix = table.substring(0, dot);
             name = table.substring(dot + 1);
         }
         try (Connection conn = ds.getConnection()) {
             DatabaseMetaData md = conn.getMetaData();
+            // MySQL 前缀是 catalog（无前缀取当前库）；DM 前缀是 schema
+            boolean mysql = isMySql(md);
+            String catalog = mysql ? (prefix != null ? prefix : conn.getCatalog()) : null;
+            String schema = mysql ? null : prefix;
             Map<String, ColumnInfo> columns = new LinkedHashMap<>();
-            try (ResultSet rs = md.getColumns(null, schema, name, "%")) {
+            try (ResultSet rs = md.getColumns(catalog, schema, name, "%")) {
                 while (rs.next()) {
                     columns.put(rs.getString("COLUMN_NAME"), new ColumnInfo(
                             rs.getString("COLUMN_NAME"),
@@ -69,7 +92,7 @@ public class MetadataService {
                             false));
                 }
             }
-            try (ResultSet rs = md.getPrimaryKeys(null, schema, name)) {
+            try (ResultSet rs = md.getPrimaryKeys(catalog, schema, name)) {
                 while (rs.next()) {
                     String col = rs.getString("COLUMN_NAME");
                     ColumnInfo c = columns.get(col);
@@ -80,7 +103,7 @@ public class MetadataService {
                 }
             }
             Map<String, IndexInfo> indexes = new LinkedHashMap<>();
-            try (ResultSet rs = md.getIndexInfo(null, schema, name, false, false)) {
+            try (ResultSet rs = md.getIndexInfo(catalog, schema, name, false, false)) {
                 while (rs.next()) {
                     String idxName = rs.getString("INDEX_NAME");
                     String col = rs.getString("COLUMN_NAME");

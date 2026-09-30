@@ -89,6 +89,7 @@ export async function render(container, params = {}) {
                     <select class="form-select" id="dbType" name="dbType" required>
                         <option value="">请选择</option>
                         <option value="DM">DM</option>
+                        <option value="MYSQL">MySQL</option>
                         <option value="H2">H2</option>
                     </select>
                 </div>

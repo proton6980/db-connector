@@ -7,7 +7,6 @@ import com.feiyu.dbconnector.entity.DbConnection;
 import com.feiyu.dbconnector.security.SafetyGuardService;
 import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Singleton;
-import dm.jdbc.driver.DmdbConnection;
 import dm.jdbc.driver.DmdbStatement;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
@@ -134,9 +133,10 @@ public class QueryService {
 
         long start = System.currentTimeMillis();
         QueryResult result;
+        String dbType = c.getDbType() == null ? "" : c.getDbType().toUpperCase();
         try (Connection conn = connections.readOnlyDataSource(c).getConnection()) {
             conn.setReadOnly(true);
-            if (conn.isWrapperFor(DmdbConnection.class)) {
+            if ("DM".equals(dbType)) {
                 // DM：必须用普通 Statement；? 在 EXPLAIN 中是参数符号，不绑定，取参数化通用计划
                 try (Statement st = conn.createStatement()) {
                     st.setQueryTimeout(props.timeoutSeconds());
@@ -144,7 +144,7 @@ public class QueryService {
                     result = singleTextPlan(st.unwrap(DmdbStatement.class).getExplain());
                 }
             } else {
-                // H2：EXPLAIN 返回 PLAN 结果集，正常绑定
+                // 标准路径（H2 / MySQL）：EXPLAIN 返回结果集，正常绑定
                 try (PreparedStatement ps = conn.prepareStatement("EXPLAIN " + parsed.sql())) {
                     bind(ps, parsed);
                     ps.setQueryTimeout(props.timeoutSeconds());
