@@ -15,49 +15,25 @@
 
 ## 安装
 
-### 方式一：一键脚本（推荐）
+前提条件：**Node.js 16+**（不需要安装 JDK，JRE 随包自动提供）。
+
+### npx（推荐）
+
+```bash
+npx db-connector-mcp
+```
+
+### 一键脚本
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/proton6980/db-connector/main/npm/install.sh | sh
 ```
 
-安装到 `~/.db-connector-mcp/db-connector-mcp`，自动加入 PATH。
+安装到 `~/.db-connector-mcp/db-connector`，自动加入 PATH。
 
-### 方式二：npm
+### 从源码构建
 
-```bash
-npm install db-connector-mcp
-npx db-connector-mcp
-```
-
-### 方式三：手动下载
-
-从 [GitHub Releases](https://github.com/proton6980/db-connector/releases) 下载对应平台的 Native 二进制。如果 Native 暂不可用，可使用 JAR 兜底（需 JDK 17+）。
-
-| 平台 | Native 二进制 | JAR 兜底 |
-|------|-------------|---------|
-| macOS Apple Silicon | `db-connector-darwin-arm64` | `db-connector-0.4.0.jar` |
-| macOS Intel | `db-connector-darwin-x64` | `db-connector-0.4.0.jar` |
-| Linux x64 | `db-connector-linux-x64` | `db-connector-0.4.0.jar` |
-| Windows x64 | `db-connector-windows-x64.exe` | `db-connector-0.4.0.jar` |
-
-**Native 方式**（推荐）：
-```bash
-# 以 macOS ARM64 为例，其他平台替换为对应文件名
-chmod +x db-connector-darwin-arm64
-./db-connector-darwin-arm64
-```
-
-**JAR 方式**（Native 不可用时的兜底，需 JDK 17+）：
-```bash
-java -jar db-connector-0.4.0.jar
-```
-
-> JDK 下载：<https://adoptium.net/>
-
-### 方式四：从源码构建
-
-前置条件：GraalVM JDK 25（含 native-image）
+前置条件：JDK 25 + Node.js 16+
 
 ```bash
 git clone https://github.com/proton6980/db-connector.git
@@ -65,7 +41,7 @@ cd db-connector
 ./scripts/release.sh build
 ```
 
-产物输出到 `dist/` 目录。
+产物在 `npm/platforms/<当前平台>/`，包含 JRE、JAR 和启动器。
 
 ## 启动
 
@@ -161,7 +137,7 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 
 - Java 25 + Micronaut 5.2.0 + Micronaut MCP Server 2.1.0（Streamable HTTP 传输）
 - Micronaut HTTP Server Netty（REST API + SSE endpoint）
-- GraalVM Native Image（单文件分发，无需 JRE）
+- Temurin 25 JRE 随 npm 平台包发行（无需用户安装 JDK）
 - 达梦驱动 `DmJdbcDriver11 8.1.4.125`（官方 JDBC 驱动，随项目分发）
 - JSqlParser（SQL 预检）、HikariCP（动态连接池）、H2（元数据/审计存储）
 - npm + Express（前端静态文件服务）
@@ -169,9 +145,9 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 ## 开发
 
 ```bash
-mvn verify                     # 全量测试
+mvn -f java/pom.xml verify                     # 全量测试
 # DM 容器在场时的连通/元数据探针：
-DM_URL=jdbc:dm://localhost:5236 DM_USER=SYSDBA DM_PASSWORD=SYSDBA001 mvn test -Dtest='Dm*'
+DM_URL=jdbc:dm://localhost:5236 DM_USER=SYSDBA DM_PASSWORD=SYSDBA001 mvn -f java/pom.xml test -Dtest='Dm*'
 ```
 
 ## 版本管理
@@ -179,8 +155,8 @@ DM_URL=jdbc:dm://localhost:5236 DM_USER=SYSDBA DM_PASSWORD=SYSDBA001 mvn test -D
 版本号统一在 `VERSION` 文件中管理，通过 `scripts/release.sh` 同步到所有文件：
 
 ```bash
-./scripts/release.sh bump 0.3.0    # 升级版本并同步
+./scripts/release.sh bump 0.5.0    # 升级版本并同步
 ./scripts/release.sh sync          # 仅同步当前版本
-./scripts/release.sh build         # 构建当前平台的 native image
+./scripts/release.sh build         # 构建当前平台的 JRE + JAR 包
 ./scripts/release.sh release       # 一键发布（sync + build + 指引）
 ```

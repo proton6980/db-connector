@@ -109,12 +109,6 @@ cmd_sync() {
     echo "  ✓ npm/package.json"
   fi
 
-  if [ -f "$PLATFORM_JS" ]; then
-    sed -E -i.bak "s|const FALLBACK_TAG = \"v[0-9]+\.[0-9]+\.[0-9]+\";|const FALLBACK_TAG = \"${tag}\";|" "$PLATFORM_JS"
-    rm -f "${PLATFORM_JS}.bak"
-    echo "  ✓ npm/bin/platform.js"
-  fi
-
   if [ -f "$INSTALL_SH" ]; then
     sed -E -i.bak "s|FALLBACK_TAG=\"v[0-9]+\.[0-9]+\.[0-9]+\"|FALLBACK_TAG=\"${tag}\"|" "$INSTALL_SH"
     rm -f "${INSTALL_SH}.bak"
@@ -234,19 +228,26 @@ LAUNCHER
 
   if [ "$skip_test" = false ] && [ "$platform" != "windows-x64" ]; then
     echo ""
-    echo "--- Smoke Test ---"
+    echo "--- Smoke Test (waiting up to 30s) ---"
     local launcher="${plat_dir}/bin/db-connector"
     "$launcher" &
     local app_pid=$!
-    sleep 5
-    local http_code
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:63306/ 2>/dev/null || echo "000")
+    local smoke_ok=false
+    for i in $(seq 1 15); do
+      sleep 2
+      local http_code
+      http_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:63306/ 2>/dev/null || echo "000")
+      if [ "$http_code" = "302" ] || [ "$http_code" = "301" ] || [ "$http_code" = "200" ]; then
+        echo "✓ Smoke test passed: HTTP ${http_code} (after ${i}x2s)"
+        smoke_ok=true
+        break
+      fi
+    done
     kill "$app_pid" 2>/dev/null || true
     wait "$app_pid" 2>/dev/null || true
-    if [ "$http_code" = "302" ] || [ "$http_code" = "301" ] || [ "$http_code" = "200" ]; then
-      echo "✓ Smoke test passed: HTTP ${http_code}"
-    else
-      echo "⚠ Smoke test: HTTP ${http_code} (may be normal if port conflict)"
+    if [ "$smoke_ok" = false ]; then
+      echo "ERROR: Smoke test failed — no 302/200 within 30s"
+      exit 1
     fi
   fi
 

@@ -24,7 +24,7 @@
     "db-connector-mcp": "./bin/run.js"
   },
   "scripts": {
-      "start": "node ./bin/run.js"
+    "start": "node ./bin/run.js"
   },
   "files": [
     "bin/run.js",
@@ -45,5 +45,11 @@
   "cpu": [
     "x64",
     "arm64"
-  ]
+  ],
+  "optionalDependencies": {
+    "db-connector-mcp-darwin-arm64": "0.4.0",
+    "db-connector-mcp-darwin-x64": "0.4.0",
+    "db-connector-mcp-linux-x64": "0.4.0",
+    "db-connector-mcp-win32-x64": "0.4.0"
+  }
 }

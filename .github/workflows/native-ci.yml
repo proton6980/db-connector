@@ -1,11 +1,12 @@
-name: Native Image CI
+name: JRE CI
 
 on:
   push:
     branches: [main, master]
     paths:
-      - 'src/**'
-      - 'pom.xml'
+      - 'java/src/**'
+      - 'java/pom.xml'
+      - 'scripts/fetch-jre.sh'
       - '.github/workflows/native-ci.yml'
   pull_request:
     branches: [main, master]
@@ -14,31 +15,54 @@ permissions:
   contents: read
 
 jobs:
-  native-compile-check:
+  jre-smoke:
     runs-on: ubuntu-24.04
-    name: Verify Native Compile (Linux x64)
+    name: Build + JRE Smoke (Linux x64)
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: graalvm/setup-graalvm@v1
+      - uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          distribution: 'temurin'
 
-      - name: Compile Native Image
-        run: mvn -Pnative native:compile -DskipTests
+      - name: Build JAR
+        working-directory: java
+        run: mvn -DskipTests package
+
+      - name: Fetch JRE
+        run: bash scripts/fetch-jre.sh npm/platforms/linux-x64/jre
+
+      - name: Copy JAR
+        run: cp java/target/db-connector-*.jar npm/platforms/linux-x64/db-connector.jar
+
+      - name: Create Launcher
+        run: |
+          mkdir -p npm/platforms/linux-x64/bin
+          cat > npm/platforms/linux-x64/bin/db-connector <<'LAUNCHER'
+          #!/bin/sh
+          APP_HOME=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+          exec "$APP_HOME/jre/bin/java" -jar "$APP_HOME/db-connector.jar" "$@"
+          LAUNCHER
+          chmod +x npm/platforms/linux-x64/bin/db-connector
 
       - name: Smoke Test (Web mode)
         run: |
-          ./target/db-connector &
+          npm/platforms/linux-x64/bin/db-connector &
           APP_PID=$!
-          sleep 5
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:63306/)
+          OK=false
+          for i in $(seq 1 15); do
+            sleep 2
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:63306/ || echo "000")
+            if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "200" ]; then
+              echo "Smoke test passed: HTTP $HTTP_CODE (after ${i}x2s)"
+              OK=true
+              break
+            fi
+          done
           kill $APP_PID 2>/dev/null || true
-          if [ "$HTTP_CODE" != "302" ]; then
-            echo "Smoke test failed: HTTP $HTTP_CODE"
+          if [ "$OK" = false ]; then
+            echo "Smoke test failed: no 302/200 within 30s"
             exit 1
           fi
-          echo "Smoke test passed: HTTP $HTTP_CODE"
