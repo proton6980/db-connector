@@ -63,14 +63,31 @@ if (!runtime) {
   process.exit(1);
 }
 
-function isPortAvailable(port) {
+function tryListen(port, host, extra) {
   return new Promise((resolve) => {
     const server = net.createServer();
-    server.on("error", () => resolve(false));
-    server.listen(port, "127.0.0.1", () => {
-      server.close(() => resolve(true));
+    server.on("error", (err) => resolve(err.code || "ERROR"));
+    server.listen({ port, host, ...extra }, () => {
+      server.close(() => resolve(null));
     });
   });
+}
+
+async function isPortAvailable(port) {
+  // Probe both bind styles: the JVM binds an IPv6 "::" dual-stack wildcard,
+  // while Node/Express binds 127.0.0.1, and neither probe alone catches the
+  // other — a 127.0.0.1 probe passes next to Java's socket (JVM then dies
+  // with BindException), and a wildcard probe passes next to a Node socket
+  // (Express then crashes with EADDRINUSE). Port is free only if every probe
+  // succeeds. Hosts without IPv6 fall back to the IPv4 wildcard.
+  const checks = [tryListen(port, "127.0.0.1")];
+  const wildcard = await tryListen(port, "::", { ipv6Only: false });
+  if (wildcard === "EAFNOSUPPORT" || wildcard === "EADDRNOTAVAIL" || wildcard === "EPROTONOSUPPORT") {
+    checks.push(tryListen(port, "0.0.0.0"));
+  } else {
+    checks.push(wildcard);
+  }
+  return (await Promise.all(checks)).every((err) => err === null);
 }
 
 async function findAvailablePort(preferred, maxTries = 100) {
@@ -86,13 +103,15 @@ async function findAvailablePort(preferred, maxTries = 100) {
 
 let javaPort, webPort, java;
 
-function startJava(port) {
+function startJava(port, webPort) {
   java = spawn(runtime.java, ["-jar", runtime.jar], {
     stdio: "pipe",
     env: {
       ...process.env,
       DBCONNECTOR_PORT: String(port),
-      DBCONNECTOR_WEB_PORT: "",
+      // Real web port so Java's CORS allowed-origin matches the console even
+      // when 63380 was taken and a fallback port was chosen.
+      DBCONNECTOR_WEB_PORT: String(webPort),
     },
   });
 
@@ -147,20 +166,20 @@ async function startFrontend() {
     console.warn(`Port ${preferredJavaPort} is in use, using ${javaPort} instead`);
   }
 
-  // 2. Start Java first to occupy the port
-  startJava(javaPort);
+  // 2. Pick the web port BEFORE spawning Java: it is passed to the JVM as its
+  // CORS allowed-origin, so choosing it later leaves the console blocked.
+  webPort = await findAvailablePort(preferredWebPort);
+  if (webPort !== preferredWebPort) {
+    console.warn(`Port ${preferredWebPort} is in use, using ${webPort} instead`);
+  }
 
-  // 3. Wait for Java to be ready
+  // 3. Start Java with both ports and wait for it to be ready
+  startJava(javaPort, webPort);
+
   try {
     await waitForJava(30, 1000);
   } catch (err) {
     console.error(`Warning: ${err.message}. Starting frontend anyway...`);
-  }
-
-  // 4. Find available Web port (Java already occupies javaPort, no conflict)
-  webPort = await findAvailablePort(preferredWebPort);
-  if (webPort !== preferredWebPort) {
-    console.warn(`Port ${preferredWebPort} is in use, using ${webPort} instead`);
   }
 
   const frontendDir = path.join(__dirname, "..", "frontend");

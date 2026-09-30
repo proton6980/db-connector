@@ -17,7 +17,7 @@ public class ConsoleTools {
             }
         }
         String webPortStr = System.getenv("DBCONNECTOR_WEB_PORT");
-        int webPort = 68080;
+        int webPort = 63380;
         if (webPortStr != null && !webPortStr.isBlank()) {
             try {
                 webPort = Integer.parseInt(webPortStr);
