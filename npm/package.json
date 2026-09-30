@@ -24,12 +24,10 @@
     "db-connector-mcp": "./bin/run.js"
   },
   "scripts": {
-    "postinstall": "node ./bin/download.js",
-    "start": "node ./bin/run.js"
+      "start": "node ./bin/run.js"
   },
   "files": [
     "bin/run.js",
-    "bin/download.js",
     "bin/platform.js",
     "frontend/"
   ],

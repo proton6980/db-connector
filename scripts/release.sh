@@ -254,8 +254,68 @@ LAUNCHER
   echo "--- Package Size ---"
   cd "$plat_dir"
   npm pack --dry-run 2>&1 | grep -E "package size|total files" || true
+
+  echo ""
+  echo "--- GitHub Release Archive ---"
+  local staging="${DIST_DIR}/staging/db-connector"
+  rm -rf "${DIST_DIR}/staging"
+  mkdir -p "$staging"
+
+  cp -R "${plat_dir}/jre" "${staging}/jre"
+  cp "${plat_dir}/db-connector.jar" "${staging}/db-connector.jar"
+  if [ -f "${plat_dir}/jre-version.txt" ]; then
+    cp "${plat_dir}/jre-version.txt" "${staging}/jre-version.txt"
+  fi
+
+  mkdir -p "${staging}/bin"
+  if [ "$platform" = "windows-x64" ]; then
+    cp "${plat_dir}/bin/db-connector.cmd" "${staging}/bin/db-connector.cmd"
+  else
+    cp "${plat_dir}/bin/db-connector" "${staging}/bin/db-connector"
+  fi
+
+  cp "${PROJECT_DIR}/npm/bin/run.js" "${staging}/bin/run.js"
+  cp "${PROJECT_DIR}/npm/bin/platform.js" "${staging}/bin/platform.js"
+  cp -R "${PROJECT_DIR}/npm/frontend" "${staging}/frontend"
+
+  cat > "${staging}/package.json" <<PKGJSON
+{
+  "name": "db-connector-mcp",
+  "version": "${ver}",
+  "private": true
+}
+PKGJSON
+
+  local tmp_nm
+  tmp_nm="$(mktemp -d)"
+  cp "${PROJECT_DIR}/npm/package.json" "${tmp_nm}/package.json"
+  if [ -f "${PROJECT_DIR}/npm/package-lock.json" ]; then
+    cp "${PROJECT_DIR}/npm/package-lock.json" "${tmp_nm}/package-lock.json"
+  fi
+  (cd "$tmp_nm" && npm ci --omit=dev 2>&1) || {
+    echo "ERROR: npm ci --omit=dev failed"
+    rm -rf "$tmp_nm"
+    exit 1
+  }
+  cp -R "${tmp_nm}/node_modules" "${staging}/node_modules"
+  rm -rf "$tmp_nm"
+
+  mkdir -p "$DIST_DIR"
+  local archive_name
+  if [ "$platform" = "windows-x64" ]; then
+    archive_name="db-connector-${platform}.zip"
+    (cd "${DIST_DIR}/staging" && zip -r -q "${DIST_DIR}/${archive_name}" db-connector/)
+  else
+    archive_name="db-connector-${platform}.tar.gz"
+    (cd "${DIST_DIR}/staging" && tar czf "${DIST_DIR}/${archive_name}" db-connector/)
+  fi
+
+  rm -rf "${DIST_DIR}/staging"
+
+  echo "  Archive: ${DIST_DIR}/${archive_name} ($(ls -lh "${DIST_DIR}/${archive_name}" | awk '{print $5}'))"
   echo ""
   echo "✓ Build complete: ${plat_dir}"
+  echo "✓ Archive: ${DIST_DIR}/${archive_name}"
 }
 
 cmd_release() {
