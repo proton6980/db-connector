@@ -77,6 +77,9 @@ public class ConnectionManageTools {
         form.setPoolMin(poolMin >= 0 ? poolMin : existing.getPoolMin());
         form.setPoolMax(poolMax >= 0 ? poolMax : existing.getPoolMax());
         form.setActive(active != null ? active : existing.getActive());
+        // 权限开关不在本工具暴露，但必须原样回填，否则更新会把写权限静默重置为 false
+        form.setAllowDml(existing.getAllowDml());
+        form.setAllowDdl(existing.getAllowDdl());
         DbConnection c = connectionService.update(existing.getId(), form);
         return formatConnection(c);
     }

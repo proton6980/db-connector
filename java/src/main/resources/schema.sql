@@ -38,3 +38,8 @@ CREATE TABLE IF NOT EXISTS sql_audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_conn ON sql_audit_log(connection_id, executed_at);
 CREATE INDEX IF NOT EXISTS idx_audit_account ON sql_audit_log(account_id, executed_at);
 CREATE INDEX IF NOT EXISTS idx_perm_account ON account_permissions(account_id);
+
+-- 存量库补列（INIT 每次启动执行，H2 2.x 支持 ADD COLUMN IF NOT EXISTS）
+ALTER TABLE db_connections ADD COLUMN IF NOT EXISTS allow_dml BOOLEAN DEFAULT FALSE;
+ALTER TABLE db_connections ADD COLUMN IF NOT EXISTS allow_ddl BOOLEAN DEFAULT FALSE;
+ALTER TABLE sql_audit_log ADD COLUMN IF NOT EXISTS tool VARCHAR(50);

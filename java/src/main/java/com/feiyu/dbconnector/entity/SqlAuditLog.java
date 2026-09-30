@@ -43,6 +43,9 @@ public class SqlAuditLog {
     @MappedProperty("error_msg")
     private String errorMsg;
 
+    @Nullable
+    private String tool;
+
     @MappedProperty("executed_at")
     @AutoPopulated
     private LocalDateTime executedAt;
@@ -67,4 +70,6 @@ public class SqlAuditLog {
     public void setErrorMsg(String errorMsg) { this.errorMsg = errorMsg; }
     public LocalDateTime getExecutedAt() { return executedAt; }
     public void setExecutedAt(LocalDateTime executedAt) { this.executedAt = executedAt; }
+    public String getTool() { return tool; }
+    public void setTool(String tool) { this.tool = tool; }
 }

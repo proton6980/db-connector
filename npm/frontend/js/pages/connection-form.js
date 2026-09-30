@@ -16,6 +16,8 @@ function readForm(form) {
         poolMin: Number(data.get('poolMin')),
         poolMax: Number(data.get('poolMax')),
         active: form.querySelector('#active').checked,
+        allowDml: form.querySelector('#allowDml').checked,
+        allowDdl: form.querySelector('#allowDdl').checked,
     };
 }
 
@@ -64,6 +66,8 @@ function fillForm(form, conn) {
     form.poolMin.value = conn.poolMin ?? 2;
     form.poolMax.value = conn.poolMax ?? 10;
     form.active.checked = conn.active !== false;
+    form.allowDml.checked = conn.allowDml === true;
+    form.allowDdl.checked = conn.allowDdl === true;
 }
 
 export async function render(container, params = {}) {
@@ -128,6 +132,19 @@ export async function render(container, params = {}) {
                 <div class="mb-3 form-check">
                     <input class="form-check-input" id="active" name="active" type="checkbox" checked>
                     <label class="form-check-label" for="active">启用</label>
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="small text-muted mb-2">写权限（默认关闭，仅对开发/测试库开启；执行后即提交不可回滚）</div>
+                        <div class="form-check">
+                            <input class="form-check-input" id="allowDml" name="allowDml" type="checkbox">
+                            <label class="form-check-label" for="allowDml">允许 DML（INSERT / UPDATE / DELETE / MERGE）</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" id="allowDdl" name="allowDdl" type="checkbox">
+                            <label class="form-check-label" for="allowDdl">允许 DDL（CREATE / ALTER / DROP / TRUNCATE）</label>
+                        </div>
+                    </div>
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-primary" type="submit">保存</button>

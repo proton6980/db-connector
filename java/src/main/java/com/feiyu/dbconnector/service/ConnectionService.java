@@ -58,15 +58,28 @@ public class ConnectionService {
     }
 
     public HikariDataSource readOnlyDataSource(DbConnection c) {
+        return dataSourceManager.getOrCreate(c.getId(), spec(c, false));
+    }
+
+    public HikariDataSource writableDataSource(DbConnection c) {
+        return dataSourceManager.getOrCreate(c.getId() + "#rw", spec(c, true));
+    }
+
+    private DataSourceSpec spec(DbConnection c, boolean writable) {
         String dbType = c.getDbType() == null ? "" : c.getDbType().toUpperCase();
-        DataSourceSpec spec = switch (dbType) {
-            case "DM" -> new DataSourceSpec(jdbcUrl(c), c.getUsername(), cipher.decrypt(c.getPassword()),
-                    "SELECT 1 FROM DUAL", c.getPoolMin(), c.getPoolMax(), true);
-            case "H2" -> new DataSourceSpec(jdbcUrl(c), c.getUsername(), cipher.decrypt(c.getPassword()),
-                    null, c.getPoolMin(), c.getPoolMax(), true);
+        String testQuery = switch (dbType) {
+            case "DM" -> "SELECT 1 FROM DUAL";
+            case "H2" -> null;
             default -> throw new BizException(ErrorCode.UNSUPPORTED_DB_TYPE, "暂不支持的数据库类型: " + c.getDbType());
         };
-        return dataSourceManager.getOrCreate(c.getId(), spec);
+        int minIdle = writable ? 0 : c.getPoolMin();
+        return new DataSourceSpec(jdbcUrl(c), c.getUsername(), cipher.decrypt(c.getPassword()),
+                testQuery, minIdle, c.getPoolMax(), !writable);
+    }
+
+    private void closePools(String id) {
+        dataSourceManager.close(id);
+        dataSourceManager.close(id + "#rw");
     }
 
     private String jdbcUrl(DbConnection c) {
@@ -126,7 +139,7 @@ public class ConnectionService {
         }
         applyForm(c, form);
         c = repository.update(c);
-        dataSourceManager.close(id);
+        closePools(id);
         return c;
     }
 
@@ -144,6 +157,8 @@ public class ConnectionService {
         c.setPoolMin(form.getPoolMin());
         c.setPoolMax(form.getPoolMax());
         c.setActive(form.getActive());
+        c.setAllowDml(Boolean.TRUE.equals(form.getAllowDml()));
+        c.setAllowDdl(Boolean.TRUE.equals(form.getAllowDdl()));
         LocalDateTime now = LocalDateTime.now();
         if (c.getCreatedAt() == null) {
             c.setCreatedAt(now);
@@ -177,11 +192,11 @@ public class ConnectionService {
     }
 
     public void reload(String id) {
-        dataSourceManager.close(id);
+        closePools(id);
     }
 
     public void delete(String id) {
-        dataSourceManager.close(id);
+        closePools(id);
         repository.deleteById(id);
     }
 

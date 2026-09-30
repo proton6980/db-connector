@@ -43,6 +43,7 @@ public class AuditLogFlusher {
             l.setRowCount(e.rowCount());
             l.setDurationMs(e.durationMs());
             l.setErrorMsg(e.errorMsg());
+            l.setTool(e.tool());
             l.setExecutedAt(LocalDateTime.now());
             return l;
         }).toList());

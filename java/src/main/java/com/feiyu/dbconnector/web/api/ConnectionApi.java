@@ -83,6 +83,8 @@ public class ConnectionApi {
         m.put("poolMin", c.getPoolMin() != null ? c.getPoolMin() : 2);
         m.put("poolMax", c.getPoolMax() != null ? c.getPoolMax() : 10);
         m.put("active", c.getActive() != null ? c.getActive() : true);
+        m.put("allowDml", Boolean.TRUE.equals(c.getAllowDml()));
+        m.put("allowDdl", Boolean.TRUE.equals(c.getAllowDdl()));
         m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : "");
         m.put("updatedAt", c.getUpdatedAt() != null ? c.getUpdatedAt().toString() : "");
         return m;

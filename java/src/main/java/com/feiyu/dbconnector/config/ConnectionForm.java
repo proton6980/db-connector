@@ -16,6 +16,8 @@ public class ConnectionForm {
     private Integer poolMin = 2;
     private Integer poolMax = 10;
     private Boolean active = true;
+    private Boolean allowDml = false;
+    private Boolean allowDdl = false;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -39,4 +41,8 @@ public class ConnectionForm {
     public void setPoolMax(Integer poolMax) { this.poolMax = poolMax; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+    public Boolean getAllowDml() { return allowDml; }
+    public void setAllowDml(Boolean allowDml) { this.allowDml = allowDml; }
+    public Boolean getAllowDdl() { return allowDdl; }
+    public void setAllowDdl(Boolean allowDdl) { this.allowDdl = allowDdl; }
 }

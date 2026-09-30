@@ -8,9 +8,9 @@ import com.feiyu.dbconnector.service.QueryService;
 import io.micronaut.aop.InterceptorBinding;
 import io.micronaut.aop.MethodInterceptor;
 import io.micronaut.aop.MethodInvocationContext;
+import io.micronaut.core.type.Argument;
 import jakarta.inject.Singleton;
 
-import java.util.List;
 import java.util.Map;
 
 @Singleton
@@ -20,17 +20,21 @@ public class AuditLogInterceptor implements MethodInterceptor<Object, Object> {
     private final AuditEventQueue queue;
     private final ParamMasker masker;
     private final ObjectMapper objectMapper;
+    private final PendingRowCount pendingRows;
 
-    public AuditLogInterceptor(AuditEventQueue queue, ParamMasker masker, ObjectMapper objectMapper) {
+    public AuditLogInterceptor(AuditEventQueue queue, ParamMasker masker, ObjectMapper objectMapper,
+                               PendingRowCount pendingRows) {
         this.queue = queue;
         this.masker = masker;
         this.objectMapper = objectMapper;
+        this.pendingRows = pendingRows;
     }
 
     @Override
     public Object intercept(MethodInvocationContext<Object, Object> context) {
         Object[] args = context.getParameterValues();
-        String methodName = context.getMethodName();
+        Argument<?>[] paramDefs = context.getArguments();
+        String tool = context.getMethodName();
 
         String connectionId = null;
         String sql = null;
@@ -40,7 +44,7 @@ public class AuditLogInterceptor implements MethodInterceptor<Object, Object> {
         for (int i = 0; i < args.length; i++) {
             if (args[i] instanceof String s) {
                 if (i == 0 && connectionId == null) connectionId = s;
-                else if (sql == null && s.length() > 10) sql = s;
+                if (paramDefs[i].getAnnotationMetadata().hasAnnotation(AuditSql.class)) sql = s;
             } else if (args[i] instanceof Map<?, ?> m) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> typed = (Map<String, Object>) m;
@@ -51,16 +55,19 @@ public class AuditLogInterceptor implements MethodInterceptor<Object, Object> {
         try {
             Object result = context.proceed();
             queue.offer(new AuditEvent(connectionId, accountId(), sql, paramsJson, "SUCCESS",
-                    rowCount(result), System.currentTimeMillis() - start, null));
+                    rowCount(result, pendingRows.drain()),
+                    System.currentTimeMillis() - start, null, tool));
             return result;
         } catch (BizException e) {
+            pendingRows.drain(); // 正常无值；防御性清理
             String status = e.getCode() == ErrorCode.SQL_REJECTED ? "BLOCKED" : "ERROR";
             queue.offer(new AuditEvent(connectionId, accountId(), sql, paramsJson, status,
-                    null, System.currentTimeMillis() - start, e.toLlmMessage()));
+                    null, System.currentTimeMillis() - start, e.toLlmMessage(), tool));
             return e.toLlmMessage();
         } catch (Exception e) {
+            pendingRows.drain();
             queue.offer(new AuditEvent(connectionId, accountId(), sql, paramsJson, "ERROR",
-                    null, System.currentTimeMillis() - start, String.valueOf(e.getMessage())));
+                    null, System.currentTimeMillis() - start, String.valueOf(e.getMessage()), tool));
             return "[" + ErrorCode.QUERY_FAILED + "] " + e.getMessage();
         }
     }
@@ -69,9 +76,10 @@ public class AuditLogInterceptor implements MethodInterceptor<Object, Object> {
         return System.getProperty("user.name", "unknown");
     }
 
-    private Integer rowCount(Object result) {
+    private Integer rowCount(Object result, Integer pending) {
+        if (pending != null) return pending;
         if (result instanceof QueryService.QueryResult q) return q.rowCount();
-        if (result instanceof List<?> l) return l.size();
+        if (result instanceof java.util.List<?> l) return l.size();
         return null;
     }
 

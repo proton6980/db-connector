@@ -46,6 +46,12 @@ public class DbConnection {
 
     private Boolean active = true;
 
+    @MappedProperty("allow_dml")
+    private Boolean allowDml = false;
+
+    @MappedProperty("allow_ddl")
+    private Boolean allowDdl = false;
+
     @MappedProperty("created_at")
     @AutoPopulated
     private LocalDateTime createdAt;
@@ -78,6 +84,10 @@ public class DbConnection {
     public void setPoolMax(Integer poolMax) { this.poolMax = poolMax; }
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
+    public Boolean getAllowDml() { return allowDml; }
+    public void setAllowDml(Boolean allowDml) { this.allowDml = allowDml; }
+    public Boolean getAllowDdl() { return allowDdl; }
+    public void setAllowDdl(Boolean allowDdl) { this.allowDdl = allowDdl; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

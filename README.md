@@ -1,15 +1,18 @@
 # db-connector
 
-本地数据库 MCP sidecar：把已配置的数据库（P1：达梦 DM8）以 MCP tool 暴露给 Cursor / Claude Code / Grok CLI 等 AI 客户端，只读查询 + 元数据 + 全量审计。内置 Web 管理控制台，一次启动同时获得 MCP SSE 服务 + 可视化管理界面。
+本地数据库 MCP sidecar：把已配置的数据库（P1：达梦 DM8）以 MCP tool 暴露给 Cursor / Claude Code / Grok CLI 等 AI 客户端，支持查询、DML、DDL、EXPLAIN + 元数据 + 全量审计。内置 Web 管理控制台，一次启动同时获得 MCP SSE 服务 + 可视化管理界面。
 
 ## 安全边界
 
 - **HTTP/SSE 模式**：MCP 通信走 Streamable HTTP（含 SSE），Java 监听 `127.0.0.1:63306`，仅本地访问
-- **只读多层防御**：
-  1. JSqlParser 预检：仅放行单条 `SELECT` / `WITH(CTE)`，拒绝 DDL/DML/多语句/`SELECT INTO`
-  2. JDBC 层：连接池 `readOnly(true)` + `setMaxRows(100)` + `setQueryTimeout(10s)`
-  3. **生产建议给目标库配只读账号**（如 DM 的 `GRANT SELECT` 账号），驱动权限层兜底
-  4. 全量审计：每次调用落 H2 文件库（SUCCESS / ERROR / BLOCKED），跨重启可查
+- **写权限默认关闭、按连接放开**：`query_database` 只读；`execute_dml` / `execute_ddl` 需要先在 Web 控制台对该连接分别勾选允许 DML / DDL。存量连接升级后一律锁写，需显式开启
+- **多层防御**：
+  1. JSqlParser 预检：仅放行单条语句并按 SELECT/DML/DDL/EXPLAIN 分类，拒绝多语句/`SELECT INTO`/`EXPLAIN ANALYZE`
+  2. UPDATE/DELETE 默认必须带 WHERE，全表操作须显式 `allowFullTable=true`
+  3. 连接池隔离：只读池 `readOnly(true)`，写操作走独立写池（`minIdle=0` 懒创建）
+  4. `setMaxRows(100)`（查询）+ `setQueryTimeout(10s)`；语句执行后自动提交、不可回滚
+  5. **生产建议给目标库配最小权限账号**（只读或按需授权），驱动权限层兜底
+  6. 全量审计：每次调用落 H2 文件库（SUCCESS / ERROR / BLOCKED，含工具名与影响行数），跨重启可查
 - 凭证 AES-256-GCM 加密落库（密文格式 `v1:...`，版本前缀留轮换余地）
 - 多用户 / 远程部署 / RBAC 是 Phase 4 的事，当前明确不做
 
@@ -79,16 +82,24 @@ DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前�
 | `delete_connection` | 删除连接并关闭连接池，不可恢复 |
 | `test_connection` | 测试连接可达性（JDBC `SELECT 1`），返回成功/失败及耗时 |
 
-### 查询与元数据
+### SQL 执行
 
 | Tool | 说明 |
 |------|------|
-| `query_database` | 只读查询：`connection`（ID 或名称）+ `sql` + `params`（`:name` 命名参数，绑定不拼接） |
+| `query_database` | 只读查询：`connection` + `sql` + `params`（`:name` 命名参数，绑定不拼接） |
+| `execute_dml` | 单条 INSERT/UPDATE/DELETE/MERGE，返回影响行数。需连接开启 DML；`allowFullTable=true` 放行无 WHERE 的全表操作 |
+| `execute_ddl` | 单条 CREATE/ALTER/DROP/TRUNCATE。需连接开启 DDL |
+| `explain_sql` | SELECT 执行计划：只传 SELECT 原文（工具自动加 EXPLAIN），禁止自带 EXPLAIN / ANALYZE |
+
+### 元数据
+
+| Tool | 说明 |
+|------|------|
 | `list_tables` | 表清单（schema、表注释） |
 | `describe_table` | 字段/类型/可空/默认值/注释/主键/索引，`table` 可写 `TABLE` 或 `SCHEMA.TABLE` |
 | `get_table_sample` | 表样例数据（≤5 行） |
 
-查询返回 `{columns, rows, rowCount, truncated, durationMs}`；被拦截/出错返回 LLM 友好文本，如 `[SQL_REJECTED] 拒绝多语句执行，仅允许单条查询`。
+查询/EXPLAIN 返回 `{columns, rows, rowCount, truncated, durationMs}`；DML 返回 `{operation, affectedRows, durationMs}`。被拦截/出错返回 LLM 友好文本，如 `[SQL_REJECTED] UPDATE/DELETE 缺少 WHERE；确需全表操作必须显式 allowFullTable=true`。
 
 ## MCP 客户端配置
 
