@@ -15,7 +15,7 @@ function findJar() {
 }
 
 const preferredJavaPort = parseInt(process.env.DBCONNECTOR_PORT || "63306", 10);
-const preferredWebPort = parseInt(process.env.DBCONNECTOR_WEB_PORT || "68080", 10);
+const preferredWebPort = parseInt(process.env.DBCONNECTOR_WEB_PORT || "63380", 10);
 
 let binaryPath = getBinaryPath();
 let isJar = false;

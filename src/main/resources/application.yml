@@ -13,8 +13,8 @@ micronaut:
       configurations:
         web:
           allowed-origins:
-            - http://127.0.0.1:${DBCONNECTOR_WEB_PORT:68080}
-            - http://localhost:${DBCONNECTOR_WEB_PORT:68080}
+            - http://127.0.0.1:${DBCONNECTOR_WEB_PORT:63380}
+            - http://localhost:${DBCONNECTOR_WEB_PORT:63380}
           allowed-methods:
             - GET
             - POST
