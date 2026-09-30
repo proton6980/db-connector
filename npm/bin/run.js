@@ -7,6 +7,29 @@ const net = require("net");
 
 const { PLATFORM_PACKAGES, PLATFORM_LAUNCHERS, getPlatformKey } = require("./platform");
 
+// Handle informational flags before anything is started: checking the version
+// must not spawn the JVM or bind any ports.
+const arg = process.argv[2];
+if (arg === "--version" || arg === "-v") {
+  console.log(require("../package.json").version);
+  process.exit(0);
+}
+if (arg === "--help" || arg === "-h") {
+  console.log(`Usage: db-connector-mcp [option]
+
+Starts the MCP SSE server and Web console (no option).
+
+Options:
+  -v, --version   Print version and exit
+  -h, --help      Show this help and exit
+
+Ports (env):
+  DBCONNECTOR_PORT       MCP SSE port      (default 63306)
+  DBCONNECTOR_WEB_PORT   Web console port  (default 63380)
+`);
+  process.exit(0);
+}
+
 function findRuntime() {
   const platformKey = getPlatformKey();
   const javaExe = process.platform === "win32" ? "java.exe" : "java";
@@ -252,4 +275,13 @@ process.on("SIGINT", () => {
 process.on("SIGTERM", () => {
   if (java) java.kill("SIGTERM");
   process.exit(0);
+});
+
+// Last-resort: a crash or process.exit() must not orphan the JVM.
+process.on("exit", () => {
+  if (java) {
+    try {
+      java.kill("SIGTERM");
+    } catch (_) {}
+  }
 });
