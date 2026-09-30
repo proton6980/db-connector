@@ -92,7 +92,7 @@ DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前�
 
 ## MCP 客户端配置
 
-加密密钥由程序自动管理：首次启动时随机生成，存入 `data/.crypto-key`（权限 `rw-------`），后续启动自动读取。**无需在配置文件中暴露密钥，Agent 不可见。**
+加密密钥由程序自动管理：首次启动时随机生成，存入 `~/.db-connector-mcp/data/.crypto-key`（权限 `rw-------`），后续启动自动读取。**无需在配置文件中暴露密钥，Agent 不可见。**
 
 ### Cursor（`.cursor/mcp.json`）
 
@@ -129,7 +129,8 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
-| `DBCONNECTOR_CRYPTO_KEY` | 否 | 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥）。未设置时自动生成并保存到 `data/.crypto-key`，无需手动配置 |
+| `DBCONNECTOR_CRYPTO_KEY` | 否 | 凭证加密口令（任意字符串，SHA-256 派生 AES-256 密钥）。未设置时自动生成并保存到 `~/.db-connector-mcp/data/.crypto-key`，无需手动配置 |
+| `DBCONNECTOR_DATA_DIR` | 否 | 数据目录（H2 库 + 加密密钥），默认 `~/.db-connector-mcp/data`（Windows 为 `%USERPROFILE%\.db-connector-mcp\data`）。固定到用户主目录，与启动时的当前目录无关 |
 | `DBCONNECTOR_PORT` | 否 | Java 后端端口（默认 63306） |
 | `DBCONNECTOR_WEB_PORT` | 否 | Web 控制台端口（默认 63380） |
 

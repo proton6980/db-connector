@@ -19,8 +19,7 @@ public class CryptoKeyProvider {
     private final Path keyFile;
 
     public CryptoKeyProvider(
-            @Property(name = "dbconnector.data-dir", defaultValue = "./data")
-            String dataDir) {
+            @Property(name = "dbconnector.data-dir") String dataDir) {
         this.keyFile = Path.of(dataDir).resolve(KEY_FILE_NAME);
     }
 

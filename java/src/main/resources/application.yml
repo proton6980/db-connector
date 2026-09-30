@@ -32,13 +32,16 @@ micronaut:
 
 datasources:
   default:
-    url: jdbc:h2:file:${dbconnector.data-dir:./data}/dbconnector;MODE=MySQL;DATABASE_TO_UPPER=FALSE;FILE_LOCK=SOCKET;AUTO_SERVER=TRUE;INIT=RUNSCRIPT FROM 'classpath:schema.sql'
+    url: jdbc:h2:file:${dbconnector.data-dir}/dbconnector;MODE=MySQL;DATABASE_TO_UPPER=FALSE;FILE_LOCK=SOCKET;AUTO_SERVER=TRUE;INIT=RUNSCRIPT FROM 'classpath:schema.sql'
     username: sa
     password: ''
     driver-class-name: org.h2.Driver
     schema-generate: NONE
 
 dbconnector:
+  # 数据目录（H2 库 + .crypto-key），固定到用户主目录，不再随启动时的 cwd 散落。
+  # 覆盖方式：-Ddbconnector.data-dir=/abs/path 或环境变量 DBCONNECTOR_DATA_DIR
+  data-dir: ${user.home}/.db-connector-mcp/data
   query:
     max-rows: 100
     timeout-seconds: 10

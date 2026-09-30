@@ -47,6 +47,7 @@ frontend/
 opencode.json
 npm/bin/native/
 npm/data/
+npm/platforms/*/data/
 npm/node_modules
 npm/platforms/darwin-arm64/jre
 npm/platforms/darwin-x64/jre
