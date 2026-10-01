@@ -19,6 +19,9 @@ public class MetadataService {
 
     private static final Set<String> DM_SYSTEM_SCHEMAS = Set.of("SYS", "SYSSSO", "SYSAUDITOR", "CTI_SYSDBA");
     private static final Set<String> MYSQL_SYSTEM_CATALOGS = Set.of("information_schema", "mysql", "performance_schema", "sys");
+    // KADB 基于 Greenplum/PostgreSQL，库是 catalog、模式是 schema
+    private static final Set<String> KINGBASE_SYSTEM_SCHEMAS =
+            Set.of("pg_catalog", "information_schema", "pg_toast", "gp_toolkit");
 
     @Serdeable
     public record TableInfo(String schema, String name, String remarks) {}
@@ -37,7 +40,8 @@ public class MetadataService {
         try (Connection conn = ds.getConnection()) {
             DatabaseMetaData md = conn.getMetaData();
             boolean mysql = isMySql(md);
-            // MySQL 的库是 catalog：只列当前库；DM 用 schema：catalog 传 null 跨模式列出后过滤系统模式
+            Set<String> systemSchemas = isKingbase(md) ? KINGBASE_SYSTEM_SCHEMAS : DM_SYSTEM_SCHEMAS;
+            // MySQL 的库是 catalog：只列当前库；DM/Kingbase 用 schema：catalog 传 null 跨模式列出后过滤系统模式
             String catalog = mysql ? conn.getCatalog() : null;
             try (ResultSet rs = md.getTables(catalog, null, "%", new String[]{"TABLE"})) {
                 List<TableInfo> tables = new ArrayList<>();
@@ -50,7 +54,7 @@ public class MetadataService {
                         tables.add(new TableInfo(cat, rs.getString("TABLE_NAME"), rs.getString("REMARKS")));
                     } else {
                         String schema = rs.getString("TABLE_SCHEM");
-                        if (DM_SYSTEM_SCHEMAS.contains(schema)) {
+                        if (systemSchemas.contains(schema)) {
                             continue;
                         }
                         tables.add(new TableInfo(schema, rs.getString("TABLE_NAME"), rs.getString("REMARKS")));
@@ -64,6 +68,11 @@ public class MetadataService {
     private static boolean isMySql(DatabaseMetaData md) throws SQLException {
         String url = md.getURL();
         return url != null && url.startsWith("jdbc:mysql:");
+    }
+
+    private static boolean isKingbase(DatabaseMetaData md) throws SQLException {
+        String url = md.getURL();
+        return url != null && url.startsWith("jdbc:kingbase8:");
     }
 
     public DescribeResult describeTable(DataSource ds, String table) throws SQLException {

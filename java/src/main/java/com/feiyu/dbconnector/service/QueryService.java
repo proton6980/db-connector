@@ -144,7 +144,7 @@ public class QueryService {
                     result = singleTextPlan(st.unwrap(DmdbStatement.class).getExplain());
                 }
             } else {
-                // 标准路径（H2 / MySQL）：EXPLAIN 返回结果集，正常绑定
+                // 标准路径（H2 / MySQL / Kingbase）：EXPLAIN 返回结果集，正常绑定
                 try (PreparedStatement ps = conn.prepareStatement("EXPLAIN " + parsed.sql())) {
                     bind(ps, parsed);
                     ps.setQueryTimeout(props.timeoutSeconds());

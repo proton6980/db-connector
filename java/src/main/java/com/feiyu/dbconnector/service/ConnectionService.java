@@ -70,6 +70,7 @@ public class ConnectionService {
         String testQuery = switch (dbType) {
             case "DM" -> "SELECT 1 FROM DUAL";
             case "MYSQL" -> "SELECT 1";
+            case "KINGBASE" -> "SELECT 1";
             case "H2" -> null;
             default -> throw new BizException(ErrorCode.UNSUPPORTED_DB_TYPE, "暂不支持的数据库类型: " + c.getDbType());
         };
@@ -90,6 +91,8 @@ public class ConnectionService {
             case "DM" -> "jdbc:dm://" + c.getHost() + ":" + c.getPort()
                     + (c.getDatabaseName() != null ? "/" + c.getDatabaseName() : "") + query;
             case "MYSQL" -> "jdbc:mysql://" + c.getHost() + ":" + c.getPort()
+                    + "/" + (c.getDatabaseName() != null ? c.getDatabaseName() : "") + query;
+            case "KINGBASE" -> "jdbc:kingbase8://" + c.getHost() + ":" + c.getPort()
                     + "/" + (c.getDatabaseName() != null ? c.getDatabaseName() : "") + query;
             case "H2" -> "jdbc:h2:mem:" + (c.getDatabaseName() != null ? c.getDatabaseName() : c.getName())
                     + ";DB_CLOSE_DELAY=-1";
@@ -178,6 +181,7 @@ public class ConnectionService {
         String testSql = switch (c.getDbType().toUpperCase()) {
             case "DM" -> "SELECT 1 FROM DUAL";
             case "MYSQL" -> "SELECT 1";
+            case "KINGBASE" -> "SELECT 1";
             case "H2" -> "SELECT 1";
             default -> "SELECT 1";
         };
