@@ -91,6 +91,7 @@ export async function render(container, params = {}) {
                         <option value="DM">DM</option>
                         <option value="MYSQL">MySQL</option>
                         <option value="KINGBASE">人大金仓 KADB</option>
+                        <option value="ORACLE">Oracle</option>
                         <option value="H2">H2</option>
                     </select>
                 </div>

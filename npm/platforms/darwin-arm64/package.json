@@ -1,6 +1,6 @@
 {
   "name": "db-connector-mcp-darwin-arm64",
-  "version": "0.8.0",
+  "version": "0.9.1",
   "description": "db-connector-mcp runtime for darwin-arm64 (Temurin 25 JRE + JAR)",
   "license": "MIT",
   "os": ["darwin"],

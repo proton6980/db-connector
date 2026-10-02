@@ -22,6 +22,12 @@ public class MetadataService {
     // KADB 基于 Greenplum/PostgreSQL，库是 catalog、模式是 schema
     private static final Set<String> KINGBASE_SYSTEM_SCHEMAS =
             Set.of("pg_catalog", "information_schema", "pg_toast", "gp_toolkit");
+    // Oracle 用户即 schema；JDBC 返回的 TABLE_SCHEM 默认为大写
+    private static final Set<String> ORACLE_SYSTEM_SCHEMAS = Set.of(
+            "SYS", "SYSTEM", "DBSNMP", "OUTLN", "APPQOSSYS", "DBSFWUSER",
+            "REMOTE_SCHEDULER_AGENT", "SYSBACKUP", "SYSDG", "SYSKM", "SYSRAC",
+            "GGSYS", "AUDSYS", "DVF", "LBACSYS", "DVSYS", "MDSYS", "OLAPSYS",
+            "XDB", "WMSYS", "ORDSYS", "CTXSYS", "EXFSYS");
 
     @Serdeable
     public record TableInfo(String schema, String name, String remarks) {}
@@ -40,7 +46,7 @@ public class MetadataService {
         try (Connection conn = ds.getConnection()) {
             DatabaseMetaData md = conn.getMetaData();
             boolean mysql = isMySql(md);
-            Set<String> systemSchemas = isKingbase(md) ? KINGBASE_SYSTEM_SCHEMAS : DM_SYSTEM_SCHEMAS;
+            Set<String> systemSchemas = systemSchemas(md);
             // MySQL 的库是 catalog：只列当前库；DM/Kingbase 用 schema：catalog 传 null 跨模式列出后过滤系统模式
             String catalog = mysql ? conn.getCatalog() : null;
             try (ResultSet rs = md.getTables(catalog, null, "%", new String[]{"TABLE"})) {
@@ -73,6 +79,20 @@ public class MetadataService {
     private static boolean isKingbase(DatabaseMetaData md) throws SQLException {
         String url = md.getURL();
         return url != null && url.startsWith("jdbc:kingbase8:");
+    }
+
+    private static Set<String> systemSchemas(DatabaseMetaData md) throws SQLException {
+        String url = md.getURL();
+        if (url == null) {
+            return DM_SYSTEM_SCHEMAS;
+        }
+        if (url.startsWith("jdbc:kingbase8:")) {
+            return KINGBASE_SYSTEM_SCHEMAS;
+        }
+        if (url.startsWith("jdbc:oracle:")) {
+            return ORACLE_SYSTEM_SCHEMAS;
+        }
+        return DM_SYSTEM_SCHEMAS;
     }
 
     public DescribeResult describeTable(DataSource ds, String table) throws SQLException {

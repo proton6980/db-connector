@@ -143,6 +143,20 @@ public class QueryService {
                     st.execute("EXPLAIN " + parsed.sql());
                     result = singleTextPlan(st.unwrap(DmdbStatement.class).getExplain());
                 }
+            } else if ("ORACLE".equals(dbType)) {
+                // Oracle 无结果集形式的 EXPLAIN：先 EXPLAIN PLAN FOR 写入会话 PLAN_TABLE，再用 DBMS_XPLAN.DISPLAY 取文本
+                try (PreparedStatement ps = conn.prepareStatement("EXPLAIN PLAN FOR " + parsed.sql())) {
+                    bind(ps, parsed);
+                    ps.setQueryTimeout(props.timeoutSeconds());
+                    ps.execute();
+                }
+                try (Statement st = conn.createStatement()) {
+                    st.setQueryTimeout(props.timeoutSeconds());
+                    try (ResultSet rs = st.executeQuery(
+                            "SELECT PLAN_TABLE_OUTPUT FROM TABLE(DBMS_XPLAN.DISPLAY())")) {
+                        result = extract(rs, props.maxRows() + 1);
+                    }
+                }
             } else {
                 // 标准路径（H2 / MySQL / Kingbase）：EXPLAIN 返回结果集，正常绑定
                 try (PreparedStatement ps = conn.prepareStatement("EXPLAIN " + parsed.sql())) {

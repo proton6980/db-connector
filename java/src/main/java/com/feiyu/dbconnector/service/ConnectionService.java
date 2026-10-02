@@ -71,6 +71,7 @@ public class ConnectionService {
             case "DM" -> "SELECT 1 FROM DUAL";
             case "MYSQL" -> "SELECT 1";
             case "KINGBASE" -> "SELECT 1";
+            case "ORACLE" -> "SELECT 1 FROM DUAL";
             case "H2" -> null;
             default -> throw new BizException(ErrorCode.UNSUPPORTED_DB_TYPE, "暂不支持的数据库类型: " + c.getDbType());
         };
@@ -94,6 +95,9 @@ public class ConnectionService {
                     + "/" + (c.getDatabaseName() != null ? c.getDatabaseName() : "") + query;
             case "KINGBASE" -> "jdbc:kingbase8://" + c.getHost() + ":" + c.getPort()
                     + "/" + (c.getDatabaseName() != null ? c.getDatabaseName() : "") + query;
+            // Oracle thin URL（service name 形式）不支持 ?k=v 查询串，extraParams 不拼接
+            case "ORACLE" -> "jdbc:oracle:thin:@//" + c.getHost() + ":" + c.getPort()
+                    + "/" + (c.getDatabaseName() != null ? c.getDatabaseName() : "");
             case "H2" -> "jdbc:h2:mem:" + (c.getDatabaseName() != null ? c.getDatabaseName() : c.getName())
                     + ";DB_CLOSE_DELAY=-1";
             default -> throw new BizException(ErrorCode.UNSUPPORTED_DB_TYPE, "暂不支持的数据库类型: " + c.getDbType());
@@ -182,6 +186,7 @@ public class ConnectionService {
             case "DM" -> "SELECT 1 FROM DUAL";
             case "MYSQL" -> "SELECT 1";
             case "KINGBASE" -> "SELECT 1";
+            case "ORACLE" -> "SELECT 1 FROM DUAL";
             case "H2" -> "SELECT 1";
             default -> "SELECT 1";
         };

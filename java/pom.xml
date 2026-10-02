@@ -12,7 +12,7 @@
 
     <groupId>com.feiyu</groupId>
     <artifactId>db-connector</artifactId>
-    <version>0.8.0</version>
+    <version>0.9.1</version>
     <packaging>${packaging}</packaging>
     <name>db-connector</name>
     <description>DB Connector</description>
@@ -113,6 +113,11 @@
             <groupId>cn.com.kingbase</groupId>
             <artifactId>kingbase8</artifactId>
             <version>9.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
         </dependency>
 
         <dependency>
