@@ -1,0 +1,57 @@
+name: Publish Main npm Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag (e.g. v0.5.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish-main:
+    runs-on: ubuntu-24.04
+    name: Publish main npm package
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Prepare version from tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag: $RELEASE_TAG. Expected format: vX.Y.Z"
+            exit 1
+          fi
+          printf '%s\n' "${RELEASE_TAG#v}" > VERSION
+          chmod +x scripts/release.sh
+          ./scripts/release.sh sync
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Publish main package
+        if: env.NPM_TOKEN != ''
+        working-directory: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+          npm publish
+
+      - name: Dry run (no NPM_TOKEN)
+        if: env.NPM_TOKEN == ''
+        working-directory: npm
+        run: npm pack --dry-run
