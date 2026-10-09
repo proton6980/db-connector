@@ -79,6 +79,7 @@ class SqlAuditLogRepositoryTest {
 
         List<Object[]> stats = repo.statusStatsSince(LocalDateTime.now().minusHours(1));
         assertEquals(2, stats.size());
+        assertEquals(3, stats.get(0).length);
     }
 
     @Test

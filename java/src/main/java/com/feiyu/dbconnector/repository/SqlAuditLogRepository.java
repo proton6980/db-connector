@@ -36,7 +36,7 @@ public interface SqlAuditLogRepository extends CrudRepository<SqlAuditLog, Long>
             nativeQuery = true)
     List<String> distinctAccountIds();
 
-    @Query(value = "SELECT status, COUNT(*) FROM sql_audit_log WHERE executed_at >= :since GROUP BY status ORDER BY status",
+    @Query(value = "SELECT status, COUNT(*), AVG(duration_ms) FROM sql_audit_log WHERE executed_at >= :since GROUP BY status ORDER BY status",
             nativeQuery = true)
     List<Object[]> statusStatsSince(LocalDateTime since);
 

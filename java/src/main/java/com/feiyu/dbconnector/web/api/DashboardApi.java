@@ -47,7 +47,9 @@ public class DashboardApi {
         for (Object[] row : statusStats) {
             String status = (String) row[0];
             long count = ((Number) row[1]).longValue();
-            double avgDur = ((Number) row[2]).doubleValue();
+            double avgDur = row.length > 2 && row[2] instanceof Number
+                    ? ((Number) row[2]).doubleValue()
+                    : 0.0;
             switch (status) {
                 case "SUCCESS" -> successCount = count;
                 case "ERROR" -> errorCount = count;
@@ -66,7 +68,9 @@ public class DashboardApi {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("sqlText", row[0]);
             item.put("count", ((Number) row[1]).longValue());
-            item.put("avgDuration", ((Number) row[2]).doubleValue());
+            item.put("avgDuration", row.length > 2 && row[2] instanceof Number
+                    ? ((Number) row[2]).doubleValue()
+                    : 0.0);
             topSql.add(item);
         }
 
