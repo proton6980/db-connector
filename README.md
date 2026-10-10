@@ -44,7 +44,19 @@ cd db-connector
 ./scripts/release.sh build
 ```
 
-产物在 `npm/platforms/<当前平台>/`，包含 JRE、JAR 和启动器。
+默认构建当前平台，产物在 `npm/platforms/<平台>/`，包含 JRE、JAR 和启动器。
+
+JAR 是 JVM 字节码，不包含 macOS/Linux/Windows 原生代码，因此可以在一台机器上组装其他平台的运行包。脚本会从 Eclipse Temurin 下载对应目标平台的 JRE，并校验 SHA-256；跨平台目标只做文件和归档校验，不会在当前机器上执行目标平台的 Java 冒烟测试。
+
+```bash
+# 在当前机器上构建指定平台（支持 darwin-arm64、darwin-x64、linux-x64、windows-x64）
+./scripts/release.sh build --platform linux-x64 --skip-test
+
+# 一次生成全部平台的 npm 包和 GitHub Release 归档
+./scripts/release.sh build-all
+```
+
+`build-all` 会只编译一次 JAR，然后为每个平台下载并校验独立的 JRE，生成对应的启动器和 `dist/db-connector-<platform>.*` 归档。它适合在 macOS ARM64 等单一开发机上准备完整发布物；发布前仍建议在目标平台或 CI runner 上做最终启动验证。
 
 ## 启动
 
@@ -190,5 +202,7 @@ ORACLE_URL='jdbc:oracle:thin:@//localhost:1521/XEPDB1' \
 ./scripts/release.sh bump 0.5.0    # 升级版本并同步
 ./scripts/release.sh sync          # 仅同步当前版本
 ./scripts/release.sh build         # 构建当前平台的 JRE + JAR 包
+./scripts/release.sh build --platform linux-x64 --skip-test  # 指定目标平台
+./scripts/release.sh build-all     # 一次构建全部支持的平台
 ./scripts/release.sh release       # 一键发布（sync + build + 指引）
 ```

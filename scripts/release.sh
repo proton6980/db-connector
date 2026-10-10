@@ -13,6 +13,8 @@ README_MD="${PROJECT_DIR}/README.md"
 DIST_DIR="${PROJECT_DIR}/dist"
 FETCH_JRE="${PROJECT_DIR}/scripts/fetch-jre.sh"
 PLATFORMS_DIR="${PROJECT_DIR}/npm/platforms"
+BUILT_JAR_FILE=""
+REUSE_BUILT_JAR=false
 
 usage() {
   cat <<EOF
@@ -20,17 +22,21 @@ Usage: $(basename "$0") <command> [options]
 
 Commands:
   sync         Sync VERSION to pom.xml, package.json, platform.js, install.sh
-  build        Assemble the current platform's npm runtime package
-  release      Sync version + build + show upload instructions
+  build        Assemble one platform's npm runtime package
+  build-all    Assemble all supported platform packages from one host
+  release      Sync version + build one platform + show upload instructions
   bump <ver>   Bump version (e.g., bump 0.5.0)
 
 Options:
-  --skip-test  Skip smoke test
+  --platform <name>  Target platform (default: current host)
+  --skip-test        Skip smoke test
 
 Examples:
   $(basename "$0") bump 0.5.0
   $(basename "$0") sync
   $(basename "$0") build
+  $(basename "$0") build --platform linux-x64 --skip-test
+  $(basename "$0") build-all
   $(basename "$0") release
 EOF
   exit 1
@@ -68,8 +74,20 @@ platform_to_npm() {
     darwin-arm64) echo "darwin-arm64" ;;
     darwin-x64)   echo "darwin-x64" ;;
     linux-x64)    echo "linux-x64" ;;
-    windows-x64)  echo "win32-x64" ;;
+    windows-x64|win32-x64) echo "win32-x64" ;;
     *) echo "Unsupported platform: $platform"; exit 1 ;;
+  esac
+}
+
+normalize_platform() {
+  case "$1" in
+    darwin-arm64|darwin-x64|linux-x64|windows-x64) echo "$1" ;;
+    win32-x64) echo "windows-x64" ;;
+    *)
+      echo "Unsupported platform: $1" >&2
+      echo "Supported: darwin-arm64, darwin-x64, linux-x64, windows-x64" >&2
+      exit 1
+      ;;
   esac
 }
 
@@ -145,25 +163,13 @@ cmd_sync() {
   echo "Done. All files synced to version ${ver}."
 }
 
-cmd_build() {
-  local ver platform skip_test=false
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --skip-test) skip_test=true; shift ;;
-      *) shift ;;
-    esac
-  done
+build_jar() {
+  local ver="$1"
 
-  ver="$(read_version)"
-  platform="$(detect_platform)"
-  local npm_plat
-  npm_plat="$(platform_to_npm "$platform")"
-  local plat_dir="${PLATFORMS_DIR}/${npm_plat}"
-
-  echo "=========================================="
-  echo " Building db-connector ${ver}"
-  echo " Platform: ${platform} (npm: ${npm_plat})"
-  echo "=========================================="
+  if [ "$REUSE_BUILT_JAR" = true ] && [ -n "$BUILT_JAR_FILE" ] && [ -f "$BUILT_JAR_FILE" ]; then
+    echo "  Reusing JAR: ${BUILT_JAR_FILE}"
+    return
+  fi
 
   local JAVA_HOME_CANDIDATE=""
   if [ -d "/Users/feiyu/Library/Java/JavaVirtualMachines/graalvm-jdk-25/Contents/Home" ]; then
@@ -189,25 +195,59 @@ cmd_build() {
   cd "$JAVA_DIR"
   mvn -DskipTests package
 
-  local JAR_FILE="${JAVA_DIR}/target/db-connector-${ver}.jar"
-  if [ ! -f "$JAR_FILE" ]; then
-    echo "ERROR: JAR not found at ${JAR_FILE}"
+  BUILT_JAR_FILE="${JAVA_DIR}/target/db-connector-${ver}.jar"
+  if [ ! -f "$BUILT_JAR_FILE" ]; then
+    echo "ERROR: JAR not found at ${BUILT_JAR_FILE}"
     exit 1
   fi
 
-  if ! jar tf "$JAR_FILE" | grep -q "META-INF/MANIFEST.MF"; then
+  if ! jar tf "$BUILT_JAR_FILE" | grep -q "META-INF/MANIFEST.MF"; then
     echo "ERROR: JAR does not contain META-INF/MANIFEST.MF"
     exit 1
   fi
-  echo "  JAR: ${JAR_FILE} ($(ls -lh "$JAR_FILE" | awk '{print $5}'))"
+  echo "  JAR: ${BUILT_JAR_FILE} ($(ls -lh "$BUILT_JAR_FILE" | awk '{print $5}'))"
+}
+
+cmd_build() {
+  local ver platform target_platform="" skip_test=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --platform)
+        [ $# -ge 2 ] || { echo "ERROR: --platform requires a value"; exit 1; }
+        target_platform="$2"
+        shift 2
+        ;;
+      --skip-test) skip_test=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
+  ver="$(read_version)"
+  if [ -n "$target_platform" ]; then
+    platform="$(normalize_platform "$target_platform")"
+  else
+    platform="$(detect_platform)"
+  fi
+  local host_platform
+  host_platform="$(detect_platform)"
+  local npm_plat
+  npm_plat="$(platform_to_npm "$platform")"
+  local plat_dir="${PLATFORMS_DIR}/${npm_plat}"
+
+  echo "=========================================="
+  echo " Building db-connector ${ver}"
+  echo " Platform: ${platform} (npm: ${npm_plat})"
+  echo "=========================================="
+
+  build_jar "$ver"
 
   mkdir -p "$plat_dir/bin"
-  cp "$JAR_FILE" "${plat_dir}/db-connector.jar"
+  cp "$BUILT_JAR_FILE" "${plat_dir}/db-connector.jar"
   echo "  Copied JAR to ${plat_dir}/db-connector.jar"
 
   echo ""
   echo "--- Fetching JRE ---"
-  "$FETCH_JRE" "${plat_dir}/jre"
+  "$FETCH_JRE" --platform "$platform" "${plat_dir}/jre"
 
   if [ "$platform" = "windows-x64" ]; then
     cat > "${plat_dir}/bin/db-connector.cmd" <<'LAUNCHER'
@@ -226,7 +266,7 @@ LAUNCHER
   chmod +x "${plat_dir}/jre/bin/java" 2>/dev/null || true
   echo "  Launcher written to ${plat_dir}/bin/"
 
-  if [ "$skip_test" = false ] && [ "$platform" != "windows-x64" ]; then
+  if [ "$skip_test" = false ] && [ "$platform" = "$host_platform" ] && [ "$platform" != "windows-x64" ]; then
     echo ""
     echo "--- Smoke Test (waiting up to 30s) ---"
     local launcher="${plat_dir}/bin/db-connector"
@@ -249,6 +289,9 @@ LAUNCHER
       echo "ERROR: Smoke test failed — no 302/200 within 30s"
       exit 1
     fi
+  elif [ "$platform" != "$host_platform" ]; then
+    echo "--- Smoke Test skipped ---"
+    echo "  Target ${platform} cannot be executed on host ${host_platform}."
   fi
 
   echo ""
@@ -319,7 +362,7 @@ PKGJSON
   echo "✓ Archive: ${DIST_DIR}/${archive_name}"
 }
 
-cmd_release() {
+cmd_build_all() {
   local skip_test=false
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -328,10 +371,45 @@ cmd_release() {
     esac
   done
 
+  local host_platform
+  host_platform="$(detect_platform)"
+  REUSE_BUILT_JAR=true
+
+  echo "Building all supported platforms from host ${host_platform}."
+  echo "The portable JAR will be compiled once; each target gets its own JRE and launcher."
+
+  local platform
+  for platform in darwin-arm64 darwin-x64 linux-x64 windows-x64; do
+    local build_args=(--platform "$platform")
+    if [ "$skip_test" = true ] || [ "$platform" != "$host_platform" ] || [ "$platform" = "windows-x64" ]; then
+      build_args+=(--skip-test)
+    fi
+    cmd_build "${build_args[@]}"
+  done
+}
+
+cmd_release() {
+  local skip_test=false target_platform=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --platform)
+        [ $# -ge 2 ] || { echo "ERROR: --platform requires a value"; exit 1; }
+        target_platform="$2"
+        shift 2
+        ;;
+      --skip-test) skip_test=true; shift ;;
+      *) shift ;;
+    esac
+  done
+
   local ver tag platform
   ver="$(read_version)"
   tag="v${ver}"
-  platform="$(detect_platform)"
+  if [ -n "$target_platform" ]; then
+    platform="$(normalize_platform "$target_platform")"
+  else
+    platform="$(detect_platform)"
+  fi
   local npm_plat
   npm_plat="$(platform_to_npm "$platform")"
 
@@ -341,6 +419,7 @@ cmd_release() {
   echo ""
   echo "=== Step 2: Build Runtime Package ==="
   local build_args=()
+  [ -n "$target_platform" ] && build_args+=(--platform "$platform")
   [ "$skip_test" = true ] && build_args+=("--skip-test")
   cmd_build "${build_args[@]+${build_args[@]}}"
 
@@ -385,6 +464,7 @@ case "$CMD" in
   bump)   cmd_bump "$@" ;;
   sync)   cmd_sync ;;
   build)  cmd_build "$@" ;;
+  build-all) cmd_build_all "$@" ;;
   release) cmd_release "$@" ;;
   *)      usage ;;
 esac

@@ -3,9 +3,9 @@ set -euo pipefail
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") <dest-jre-home>
+Usage: $(basename "$0") [--platform <platform>] <dest-jre-home>
 
-Download Eclipse Temurin 25 JRE for the current platform,
+Download Eclipse Temurin 25 JRE for the current or a specified target platform,
 verify SHA256, and normalize the layout so that
   <dest-jre-home>/bin/java  (or java.exe on Windows)
 is directly executable.
@@ -13,16 +13,38 @@ is directly executable.
 A jre-version.txt file is written next to <dest-jre-home>.
 
 Supported platforms:
-  darwin-arm64  darwin-x64  linux-x64  win32-x64
+  darwin-arm64  darwin-x64  linux-x64  windows-x64 (win32-x64 alias)
 EOF
   exit 1
 }
 
-if [ $# -ne 1 ]; then
+TARGET_PLATFORM=""
+DEST_JRE_HOME=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --platform)
+      [ $# -ge 2 ] || usage
+      TARGET_PLATFORM="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      ;;
+    -* )
+      echo "ERROR: Unknown option: $1"
+      usage
+      ;;
+    *)
+      [ -z "$DEST_JRE_HOME" ] || usage
+      DEST_JRE_HOME="$1"
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$DEST_JRE_HOME" ]; then
   usage
 fi
-
-DEST_JRE_HOME="$1"
 
 detect_platform() {
   local OS ARCH
@@ -45,16 +67,32 @@ detect_platform() {
   echo "${OS}-${ARCH}"
 }
 
-PLATFORM="$(detect_platform)"
+normalize_platform() {
+  case "$1" in
+    darwin-arm64|darwin-x64|linux-x64|windows-x64) echo "$1" ;;
+    win32-x64) echo "windows-x64" ;;
+    *)
+      echo "ERROR: Unsupported platform: $1" >&2
+      echo "Supported: darwin-arm64, darwin-x64, linux-x64, windows-x64" >&2
+      exit 1
+      ;;
+  esac
+}
+
+if [ -n "$TARGET_PLATFORM" ]; then
+  PLATFORM="$(normalize_platform "$TARGET_PLATFORM")"
+else
+  PLATFORM="$(detect_platform)"
+fi
 
 case "$PLATFORM" in
   darwin-arm64) ADOPTIUM_OS="mac";   ADOPTIUM_ARCH="aarch64" ;;
   darwin-x64)   ADOPTIUM_OS="mac";   ADOPTIUM_ARCH="x64" ;;
   linux-x64)    ADOPTIUM_OS="linux"; ADOPTIUM_ARCH="x64" ;;
-  win32-x64)    ADOPTIUM_OS="windows"; ADOPTIUM_ARCH="x64" ;;
+  windows-x64)  ADOPTIUM_OS="windows"; ADOPTIUM_ARCH="x64" ;;
   *)
     echo "ERROR: Unsupported platform: ${PLATFORM}"
-    echo "Supported: darwin-arm64, darwin-x64, linux-x64, win32-x64"
+    echo "Supported: darwin-arm64, darwin-x64, linux-x64, windows-x64"
     exit 1
     ;;
 esac
@@ -162,7 +200,7 @@ with zipfile.ZipFile('$TMP_ARCHIVE') as z:
 esac
 
 JAVA_RELATIVE="bin/java"
-if [ "$PLATFORM" = "win32-x64" ]; then
+if [ "$PLATFORM" = "windows-x64" ]; then
   JAVA_RELATIVE="bin/java.exe"
 fi
 
@@ -191,7 +229,7 @@ rm -rf "$DEST_JRE_HOME"
 mkdir -p "$(dirname "$DEST_JRE_HOME")"
 mv "$JRE_SRC" "$DEST_JRE_HOME"
 
-if [ "$PLATFORM" != "win32-x64" ]; then
+if [ "$PLATFORM" != "windows-x64" ]; then
   chmod +x "$DEST_JRE_HOME/bin/java" 2>/dev/null || true
 fi
 
