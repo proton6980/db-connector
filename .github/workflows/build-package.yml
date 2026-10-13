@@ -1,0 +1,55 @@
+name: Build Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Target platform to build
+        required: true
+        default: linux-x64
+        type: choice
+        options:
+          - linux-x64
+          - darwin-arm64
+          - darwin-x64
+          - windows-x64
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ inputs.platform }}
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java (Temurin 25)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build runtime package
+        shell: bash
+        run: |
+          chmod +x scripts/release.sh scripts/fetch-jre.sh
+          ./scripts/release.sh build --platform "${{ inputs.platform }}" --skip-test
+
+      - name: Verify npm package contents
+        working-directory: npm/platforms/${{ inputs.platform == 'windows-x64' && 'win32-x64' || inputs.platform }}
+        shell: bash
+        run: npm pack --dry-run
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-connector-${{ inputs.platform }}
+          path: dist/db-connector-*
+          if-no-files-found: error

@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const net = require("net");
+const os = require("os");
 
 const { PLATFORM_PACKAGES, PLATFORM_LAUNCHERS, getPlatformKey } = require("./platform");
 
@@ -72,6 +73,98 @@ function findRuntime() {
 
 const preferredJavaPort = parseInt(process.env.DBCONNECTOR_PORT || "63306", 10);
 const preferredWebPort = parseInt(process.env.DBCONNECTOR_WEB_PORT || "63380", 10);
+const bindHost = process.env.DBCONNECTOR_BIND_HOST || "0.0.0.0";
+const webBindHost = process.env.DBCONNECTOR_WEB_HOST || "0.0.0.0";
+
+function accessPolicyFile() {
+  const dataDir = process.env.DBCONNECTOR_DATA_DIR
+    || path.join(os.homedir(), ".db-connector-mcp", "data");
+  return path.join(dataDir, "access-policy.json");
+}
+
+function loadAccessPolicy() {
+  const fallback = ["127.0.0.1", "::1"];
+  let requested;
+  try {
+    const root = JSON.parse(fs.readFileSync(accessPolicyFile(), "utf8"));
+    requested = root && root.allowed;
+  } catch (_) {
+    return fallback;
+  }
+  if (!Array.isArray(requested)) {
+    return fallback;
+  }
+
+  // Keep the Node proxy's behavior aligned with Java: malformed or partially
+  // corrupted files must never remove the recovery path through localhost.
+  const allowed = [...fallback];
+  for (const raw of requested) {
+    const entry = String(raw || "").trim();
+    if (!entry) {
+      continue;
+    }
+    const slash = entry.indexOf("/");
+    if (slash >= 0 && entry.indexOf("/", slash + 1) >= 0) {
+      continue;
+    }
+    const address = slash >= 0 ? entry.slice(0, slash).trim() : entry;
+    const family = net.isIP(address);
+    if (!family) {
+      continue;
+    }
+    if (slash >= 0) {
+      const prefix = Number(entry.slice(slash + 1).trim());
+      if (!Number.isInteger(prefix) || prefix < 0 || prefix > (family === 4 ? 32 : 128)) {
+        continue;
+      }
+    }
+    if (!allowed.includes(entry)) {
+      allowed.push(entry);
+    }
+  }
+  return allowed;
+}
+
+function createAccessBlockList() {
+  const blockList = new net.BlockList();
+  for (const raw of loadAccessPolicy()) {
+    const entry = String(raw || "").trim();
+    if (!entry) {
+      continue;
+    }
+    const slash = entry.indexOf("/");
+    const address = slash >= 0 ? entry.slice(0, slash) : entry;
+    const prefix = slash >= 0 ? Number(entry.slice(slash + 1)) : undefined;
+    const family = net.isIP(address);
+    if (!family) {
+      continue;
+    }
+    try {
+      if (prefix === undefined) {
+        blockList.addAddress(address, family === 4 ? "ipv4" : "ipv6");
+      } else if (Number.isInteger(prefix) && prefix >= 0 && prefix <= (family === 4 ? 32 : 128)) {
+        blockList.addSubnet(address, prefix, family === 4 ? "ipv4" : "ipv6");
+      }
+    } catch (_) {
+      // The Java API validates entries before writing them. Ignore a malformed
+      // file here and keep the remaining valid rules available to the web server.
+    }
+  }
+  return blockList;
+}
+
+function isClientAllowed(request) {
+  let address = request.socket.remoteAddress || "";
+  if (address.startsWith("::ffff:")) {
+    address = address.slice("::ffff:".length);
+  }
+  const family = net.isIP(address) === 4 ? "ipv4" : "ipv6";
+  try {
+    return createAccessBlockList().check(address, family);
+  } catch (_) {
+    return false;
+  }
+}
 
 const runtime = findRuntime();
 if (!runtime) {
@@ -132,6 +225,7 @@ function startJava(port, webPort) {
     env: {
       ...process.env,
       DBCONNECTOR_PORT: String(port),
+      DBCONNECTOR_BIND_HOST: bindHost,
       // Real web port so Java's CORS allowed-origin matches the console even
       // when 63380 was taken and a fallback port was chosen.
       DBCONNECTOR_WEB_PORT: String(webPort),
@@ -217,6 +311,13 @@ async function startFrontend() {
   const app = express();
 
   app.use((req, res, next) => {
+    if (!isClientAllowed(req)) {
+      return res.status(403).json({ error: "当前客户端不在访问白名单中" });
+    }
+    next();
+  });
+
+  app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -226,7 +327,39 @@ async function startFrontend() {
     next();
   });
 
-  const apiUrl = `http://127.0.0.1:${javaPort}`;
+  // Keep browser requests same-origin. This avoids exposing the Java port to
+  // the browser and makes remote access work without a hard-coded localhost URL.
+  const apiUrl = "";
+
+  app.use("/api", (req, res) => {
+    const proxy = http.request({
+      hostname: "127.0.0.1",
+      port: javaPort,
+      method: req.method,
+      path: req.originalUrl,
+      headers: {
+        ...req.headers,
+        host: `127.0.0.1:${javaPort}`,
+        connection: "close",
+      },
+    }, (upstream) => {
+      res.status(upstream.statusCode || 502);
+      for (const [name, value] of Object.entries(upstream.headers)) {
+        if (value !== undefined) {
+          res.setHeader(name, value);
+        }
+      }
+      upstream.pipe(res);
+    });
+    proxy.on("error", (err) => {
+      if (!res.headersSent) {
+        res.status(502).json({ error: `后端服务不可用: ${err.message}` });
+      } else {
+        res.destroy(err);
+      }
+    });
+    req.pipe(proxy);
+  });
 
   app.get("/*.html", (req, res, next) => {
     const filePath = path.join(frontendDir, req.path);
@@ -244,7 +377,7 @@ async function startFrontend() {
 
   app.use(express.static(frontendDir));
 
-  app.listen(webPort, "127.0.0.1", () => {
+  app.listen(webPort, webBindHost, () => {
     printInfo();
   });
 }
@@ -254,8 +387,9 @@ function printInfo() {
   console.log(``);
   console.log(`  db-connector-mcp v${pkg.version}`);
   console.log(`  ─────────────────────────────────────────────`);
-  console.log(`  MCP SSE Endpoint:  http://127.0.0.1:${javaPort}/mcp`);
-  console.log(`  Web Console:       http://127.0.0.1:${webPort}`);
+  console.log(`  MCP SSE Endpoint:  http://localhost:${javaPort}/mcp`);
+  console.log(`  Web Console:       http://localhost:${webPort}`);
+  console.log(`  Network access:    controlled by access-policy.json`);
   console.log(`  ─────────────────────────────────────────────`);
   console.log(``);
 }

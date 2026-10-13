@@ -1,6 +1,7 @@
 micronaut:
   server:
     port: -1
+    host: 127.0.0.1
 
 datasources:
   default:

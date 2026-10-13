@@ -9,6 +9,7 @@ import { render as renderConnections } from './pages/connections.js';
 import { render as renderConnectionForm } from './pages/connection-form.js';
 import { render as renderLogs } from './pages/logs.js';
 import { render as renderLogDetail } from './pages/log-detail.js';
+import { render as renderSettings } from './pages/settings.js';
 
 const routes = [
     { pattern: /^\/dashboard\/?$/, name: 'dashboard', handler: renderDashboard },
@@ -17,6 +18,7 @@ const routes = [
     { pattern: /^\/connections\/?$/, name: 'connections', handler: renderConnections },
     { pattern: /^\/logs\/([^/]+)\/?$/, name: 'logs', handler: (el, m) => renderLogDetail(el, { id: m[1] }) },
     { pattern: /^\/logs\/?$/, name: 'logs', handler: renderLogs },
+    { pattern: /^\/settings\/?$/, name: 'settings', handler: renderSettings },
 ];
 
 let appEl = null;
@@ -36,6 +38,8 @@ export function setActiveNav() {
         active = 'connections';
     } else if (path.startsWith('/logs')) {
         active = 'logs';
+    } else if (path.startsWith('/settings')) {
+        active = 'settings';
     }
     document.querySelectorAll('[data-nav]').forEach((link) => {
         link.classList.toggle('active', link.getAttribute('data-nav') === active);

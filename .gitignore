@@ -34,6 +34,10 @@ io/
 
 # Duplicate (npm/frontend is the primary)
 frontend/
+!npm/frontend/
+!npm/frontend/js/
+!npm/frontend/js/pages/
+!npm/frontend/js/pages/settings.js
 
 # IDE
 .idea/

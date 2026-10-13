@@ -8,6 +8,7 @@ micronaut:
       transport: HTTP
   server:
     port: ${DBCONNECTOR_PORT:63306}
+    host: ${DBCONNECTOR_BIND_HOST:0.0.0.0}
     cors:
       enabled: true
       configurations:

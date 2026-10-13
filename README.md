@@ -4,7 +4,7 @@
 
 ## 安全边界
 
-- **HTTP/SSE 模式**：MCP 通信走 Streamable HTTP（含 SSE），Java 监听 `127.0.0.1:63306`，仅本地访问
+- **HTTP/SSE 模式**：MCP 通信走 Streamable HTTP（含 SSE），默认只允许本机访问；需要局域网访问时，可在 Web 控制台的“设置”页添加 IP 或 CIDR 网段
 - **写权限默认关闭、按连接放开**：`query_database` 只读；`execute_dml` / `execute_ddl` 需要先在 Web 控制台对该连接分别勾选允许 DML / DDL。存量连接升级后一律锁写，需显式开启
 - **多层防御**：
   1. JSqlParser 预检：仅放行单条语句并按 SELECT/DML/DDL/EXPLAIN 分类，拒绝多语句/`SELECT INTO`/`EXPLAIN ANALYZE`
@@ -72,7 +72,9 @@ npx db-connector-mcp
 | Web 管理控制台 | `http://127.0.0.1:63380` | 浏览器打开此地址管理连接、查询、审计 |
 
 端口可通过环境变量配置：
-DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前端端口，默认 63380）。若默认端口被占用，启动时将自动选择空闲端口。
+`DBCONNECTOR_PORT`（Java 端口，默认 63306）和 `DBCONNECTOR_WEB_PORT`（前端端口，默认 63380）。若默认端口被占用，启动时将自动选择空闲端口。
+
+服务进程会监听局域网地址，但请求仍由访问白名单控制。默认白名单只有 `127.0.0.1` 和 `::1`，因此默认仍然是仅本机访问。
 
 ## Web 管理控制台
 
@@ -81,6 +83,17 @@ DBCONNECTOR_PORT（Java 端口，默认 63306）和 DBCONNECTOR_WEB_PORT（前�
 - **仪表盘**：近 24h 查询统计、错误率、Top SQL、连接池状态
 - **连接管理**：CRUD 数据库连接、测试连通性、重载连接池
 - **审计日志**：分页查询、多条件筛选、CSV 导出
+
+### 访问白名单
+
+在“设置”页选择“本机 + 指定 IP / 网段”，每行填写一条 IPv4、IPv6 或 CIDR 网段，例如：
+
+```text
+192.168.1.20
+192.168.1.0/24
+```
+
+`127.0.0.1` 和 `::1` 始终保留，保存后立即生效，不需要重启。白名单同时保护 Web 控制台和 MCP 服务。远程浏览器应访问运行 db-connector-mcp 这台机器的地址，例如 `http://192.168.1.10:63380`。
 
 ## MCP Tools
 
@@ -164,6 +177,8 @@ claude mcp add db-connector --transport sse --url http://127.0.0.1:63306/mcp
 | `DBCONNECTOR_DATA_DIR` | 否 | 数据目录（H2 库 + 加密密钥），默认 `~/.db-connector-mcp/data`（Windows 为 `%USERPROFILE%\.db-connector-mcp\data`）。固定到用户主目录，与启动时的当前目录无关 |
 | `DBCONNECTOR_PORT` | 否 | Java 后端端口（默认 63306） |
 | `DBCONNECTOR_WEB_PORT` | 否 | Web 控制台端口（默认 63380） |
+| `DBCONNECTOR_BIND_HOST` | 否 | Java 监听地址（默认 `0.0.0.0`） |
+| `DBCONNECTOR_WEB_HOST` | 否 | Web 控制台监听地址（默认 `0.0.0.0`） |
 
 ## 技术栈
 
