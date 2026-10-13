@@ -84,6 +84,7 @@ if [ -n "$TARGET_PLATFORM" ]; then
 else
   PLATFORM="$(detect_platform)"
 fi
+HOST_PLATFORM="$(detect_platform)"
 
 case "$PLATFORM" in
   darwin-arm64) ADOPTIUM_OS="mac";   ADOPTIUM_ARCH="aarch64" ;;
@@ -233,7 +234,14 @@ if [ "$PLATFORM" != "windows-x64" ]; then
   chmod +x "$DEST_JRE_HOME/bin/java" 2>/dev/null || true
 fi
 
-JAVA_VERSION=$("$DEST_JRE_HOME/bin/java" -version 2>&1 | head -3)
+if [ "$PLATFORM" = "$HOST_PLATFORM" ]; then
+  JAVA_VERSION=$("$DEST_JRE_HOME/bin/java" -version 2>&1 | head -3)
+else
+  JAVA_VERSION=$(grep '^JAVA_VERSION=' "$DEST_JRE_HOME/release" 2>/dev/null || true)
+  if [ -z "$JAVA_VERSION" ]; then
+    JAVA_VERSION="release_name=${RELEASE_NAME}"
+  fi
+fi
 
 JRE_VERSION_FILE="$(dirname "$DEST_JRE_HOME")/jre-version.txt"
 cat > "$JRE_VERSION_FILE" <<EOF
